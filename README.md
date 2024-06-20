@@ -79,7 +79,7 @@ Contributions to the `jsonrepair` package are welcome. If you'd like to contribu
 
 ## License
 
-Released under the MIT license. See the [LICENSE](LICENSE.md) file for details.
+Released under the MIT license. See the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgements
 
