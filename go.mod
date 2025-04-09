@@ -1,6 +1,6 @@
 module github.com/kaptinlin/jsonrepair
 
-go 1.21
+go 1.18
 
 require github.com/stretchr/testify v1.10.0
 
