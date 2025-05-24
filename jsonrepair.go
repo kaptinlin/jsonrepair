@@ -618,7 +618,7 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 		num := string((*text)[start:*i])
 		hasInvalidLeadingZero := regexp.MustCompile(`^0\d`).MatchString(num)
 		if hasInvalidLeadingZero {
-			output.WriteString(fmt.Sprintf(`"%s"`, num))
+			fmt.Fprintf(output, `"%s"`, num)
 		} else {
 			output.WriteString(num)
 		}
@@ -686,7 +686,7 @@ func parseUnquotedString(text *[]rune, i *int, output *strings.Builder) bool {
 						repairedSymbol.WriteRune(char)
 					}
 				}
-				output.WriteString(fmt.Sprintf(`"%s"`, repairedSymbol.String()))
+				fmt.Fprintf(output, `"%s"`, repairedSymbol.String())
 			}
 			// Skip the end quote if encountered
 			if *i < len(*text) && (*text)[*i] == codeDoubleQuote {

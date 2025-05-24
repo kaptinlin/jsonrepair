@@ -36,7 +36,7 @@ golangci-lint: install-golangci-lint
 	@$(foreach mod,$(MODULE_DIRS), \
 		(cd $(mod) && \
 		echo "[lint] golangci-lint: $(mod)" && \
-		$(GOBIN)/golangci-lint run --timeout=10m --path-prefix $(mod)) &&) true
+		$(GOBIN)/golangci-lint run --path-prefix $(mod)) &&) true
 
 .PHONY: tidy-lint
 tidy-lint:
