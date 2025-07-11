@@ -42,15 +42,24 @@ func stripLastOccurrence(text, textToStrip string, stripRemainingText bool) stri
 }
 
 // insertBeforeLastWhitespace inserts a substring before the last whitespace in the input text.
-func insertBeforeLastWhitespace(text, textToInsert string) string {
-	index := len(text)
-	if index == 0 || !isWhitespace(rune(text[index-1])) {
-		return text + textToInsert
+// For comma insertion, we want to insert after the value but before any trailing whitespace.
+func insertBeforeLastWhitespace(s, textToInsert string) string {
+	// If the last character is not whitespace, simply append the text to insert.
+	if len(s) == 0 || !isWhitespace(rune(s[len(s)-1])) {
+		return s + textToInsert
 	}
-	for index > 0 && isWhitespace(rune(text[index-1])) {
+
+	// Walk backwards over all trailing whitespace characters (space, tab, cr, lf).
+	index := len(s) - 1
+	for index >= 0 {
+		if !isWhitespace(rune(s[index])) {
+			break
+		}
 		index--
 	}
-	return text[:index] + textToInsert + text[index:]
+
+	// index now points at the last non-whitespace character.
+	return s[:index+1] + textToInsert + s[index+1:]
 }
 
 // removeAtIndex removes a substring from the input text at a specific index.
@@ -72,7 +81,8 @@ func isDigit(code rune) bool {
 
 // isValidStringCharacter checks if a code is a valid string character.
 func isValidStringCharacter(code rune) bool {
-	return code >= 0x20 && code <= 0x10FFFF
+	// based on https://www.rfc-editor.org/rfc/rfc8259.html#section-7
+	return code >= 0x0020 && code <= 0x10FFFF
 }
 
 // isDelimiter checks if a character is a delimiter.
@@ -80,13 +90,11 @@ func isDelimiter(char rune) bool {
 	return regexDelimiter.MatchString(string(char))
 }
 
-// Regular expression for delimiters.
-var regexDelimiter = regexp.MustCompile(`^[,:[\]/{}()\n+]$`)
-
-// isDelimiterExceptSlash checks if a character is a delimiter except for slash.
-func isDelimiterExceptSlash(char rune) bool {
-	return isDelimiter(char) && char != '/'
-}
+// regexDelimiter matches a single JSON delimiter character used to separate tokens.
+// The character class explicitly lists all delimiter characters and escapes special
+// characters to prevent unintended character ranges (e.g. ":[" would otherwise
+// create a range from ':' to '[').
+var regexDelimiter = regexp.MustCompile(`^[,:\[\]/{}()\n\+]$`)
 
 // isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(char rune) bool {
@@ -154,11 +162,71 @@ func isSingleQuote(code rune) bool {
 }
 
 // endsWithCommaOrNewline checks if the string ends with a comma or newline character and optional whitespace.
+// This function should only match commas that are outside of quoted strings.
 func endsWithCommaOrNewline(text string) bool {
-	return regexp.MustCompile(`[,\n][ \t\r]*$`).MatchString(text)
+	if len(text) == 0 {
+		return false
+	}
+
+	// Find the last non-whitespace character
+	runes := []rune(text)
+	i := len(runes) - 1
+
+	// Skip trailing whitespace
+	for i >= 0 && (runes[i] == ' ' || runes[i] == '\t' || runes[i] == '\r') {
+		i--
+	}
+
+	if i < 0 {
+		return false
+	}
+
+	// Check if the last non-whitespace character is a comma or newline
+	// But only if it's not inside a quoted string
+	if runes[i] == ',' || runes[i] == '\n' {
+		// Simple check: if the text ends with a quoted string, the comma is likely inside the string
+		// A more robust approach would be to parse the JSON structure, but for now we use a heuristic
+		trimmed := strings.TrimSpace(text)
+		if len(trimmed) > 0 && trimmed[len(trimmed)-1] == '"' {
+			// The text ends with a quote, so any comma before it is likely a JSON separator
+			// Look for the pattern: "..." , or "...",
+			return regexp.MustCompile(`"[ \t\r]*[,\n][ \t\r]*$`).MatchString(text)
+		}
+		return true
+	}
+
+	return false
 }
 
-// isFunctionName checks if a string is a valid function name.
-func isFunctionName(text string) bool {
-	return regexp.MustCompile(`^\w+$`).MatchString(text)
+// isFunctionNameCharStart checks if a rune is a valid function name start character.
+func isFunctionNameCharStart(code rune) bool {
+	return (code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$'
+}
+
+// isFunctionNameChar checks if a rune is a valid function name character.
+func isFunctionNameChar(code rune) bool {
+	return isFunctionNameCharStart(code) || isDigit(code)
+}
+
+// isUnquotedStringDelimiter checks if a character is a delimiter for unquoted strings.
+func isUnquotedStringDelimiter(char rune) bool {
+	return regexUnquotedStringDelimiter.MatchString(string(char))
+}
+
+// Similar to regexDelimiter but without ':' since a colon is allowed inside an
+// unquoted value until we detect a key/value separator.
+var regexUnquotedStringDelimiter = regexp.MustCompile(`^[,\[\]/{}\n\+]$`)
+
+// isWhitespaceExceptNewline checks if a rune is a whitespace character except newline.
+func isWhitespaceExceptNewline(code rune) bool {
+	return code == codeSpace || code == codeTab || code == codeReturn
+}
+
+// URL-related regular expressions and functions
+var regexUrlStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
+var regexUrlChar = regexp.MustCompile(`^[A-Za-z0-9\-._~:/?#@!$&'()*+;=]$`)
+
+// isUrlChar checks if a rune is a valid URL character.
+func isUrlChar(code rune) bool {
+	return regexUrlChar.MatchString(string(code))
 }

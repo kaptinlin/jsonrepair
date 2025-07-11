@@ -17,12 +17,18 @@ The `jsonrepair` library can automatically fix the following JSON issues:
 - **Replace Python constants**: Converts `None`, `True`, `False` to `null`, `true`, `false`.
 - **Strip trailing commas**: Removes any trailing commas.
 - **Strip comments**: Eliminates comments such as `/* ... */` and `// ...`.
+- **Strip fenced code blocks**: Removes markdown fenced code blocks like `` ```json`` and `` ``` ``.
 - **Strip ellipsis**: Removes ellipsis in arrays and objects, e.g., `[1, 2, 3, ...]`.
 - **Strip JSONP notation**: Removes JSONP callbacks, e.g., `callback({ ... })`.
 - **Strip escape characters**: Removes escape characters from strings, e.g., `{\"stringified\": \"content\"}`.
 - **Strip MongoDB data types**: Converts types like `NumberLong(2)` and `ISODate("2012-12-19T06:01:17.171Z")` to standard JSON.
 - **Concatenate strings**: Merges strings split across lines, e.g., `"long text" + "more text on next line"`.
-- **Convert newline-delimited JSON**: Encloses newline-delimited JSON in an array to make it valid.
+- **Convert newline-delimited JSON**: Encloses newline-delimited JSON in an array to make it valid, for example:
+
+    ```json
+    { "id": 1, "name": "John" }
+    { "id": 2, "name": "Sarah" }
+    ```
 
 ## Install
 
