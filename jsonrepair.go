@@ -641,6 +641,14 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				return true, nil
 			} else if (*text)[*i] == '\\' {
 				// handle escaped content like \n or \u2605
+				if *i+1 >= len(*text) {
+					// repair: incomplete escape sequence at end of string
+					// just remove the backslash and end the string
+					strStr := insertBeforeLastWhitespace(str.String(), "\"")
+					output.WriteString(strStr)
+					*i++
+					return true, nil
+				}
 				char := (*text)[*i+1]
 				if _, ok := escapeCharacters[char]; ok {
 					str.WriteRune((*text)[*i])
