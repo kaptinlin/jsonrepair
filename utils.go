@@ -79,10 +79,10 @@ func isDigit(code rune) bool {
 	return code >= codeZero && code <= codeNine
 }
 
-// isValidStringCharacter checks if a code is a valid string character.
-func isValidStringCharacter(code rune) bool {
-	// based on https://www.rfc-editor.org/rfc/rfc8259.html#section-7
-	return code >= 0x0020 && code <= 0x10FFFF
+// isValidStringCharacter checks if a character is valid inside a JSON string
+// Matches TypeScript version: char >= '\u0020'
+func isValidStringCharacter(char rune) bool {
+	return char >= 0x0020
 }
 
 // isDelimiter checks if a character is a delimiter.

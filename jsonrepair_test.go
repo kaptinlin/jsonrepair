@@ -1,6 +1,7 @@
 package jsonrepair
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -721,31 +722,33 @@ func TestShouldStripInvalidMarkdownFencedCodeBlocks(t *testing.T) {
 }
 
 // TestShouldThrowExceptionForNonRepairableIssues tests error handling for non-repairable JSON issues.
+// Updated to match TypeScript version behavior precisely
 func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
-	assertRepairFailure(t, "", "unexpected end", 0)
-	assertRepairFailure(t, `{"a",`, "unexpected end", 5)
-	// Note: Go implementation repairs `{:2}` to `{":2"` instead of throwing an error
-	assertRepair(t, `{:2}`, `{":2"`)
-	assertRepairFailure(t, `{"a":2}{}`, "unexpected character", 7)
-	assertRepairFailure(t, `{"a" ]`, "unexpected end", 6)
-	assertRepairFailure(t, `{"a":2}foo`, "unexpected character", 7)
-	assertRepairFailure(t, `foo [`, "unexpected character", 4)
+	// Precise matches with TypeScript version error messages and positions
+	assertRepairFailureExact(t, "", "Unexpected end of json string", 0)
+	assertRepairFailureExact(t, `{"a",`, "Colon expected", 4)
+	assertRepairFailureExact(t, `{:2}`, "Object key expected", 1)
+	assertRepairFailureExact(t, `{"a":2}{}`, `Unexpected character "{"`, 7)
+	assertRepairFailureExact(t, `{"a" ]`, "Colon expected", 5)
+	assertRepairFailureExact(t, `{"a":2}foo`, `Unexpected character "f"`, 7)
+	assertRepairFailureExact(t, `foo [`, `Unexpected character "["`, 4)
+	assertRepairFailureExact(t, `"\u26"`, `Invalid unicode character "\\u26""`, 1)
+	assertRepairFailureExact(t, `"\uZ000"`, `Invalid unicode character "\\uZ000"`, 1)
+	assertRepairFailureExact(t, `"\uZ000`, `Invalid unicode character "\\uZ000"`, 1)
+	assertRepairFailureExact(t, "\"abc\u0000\"", `Invalid character "\\u0000"`, 4)
+	assertRepairFailureExact(t, "\"abc\u001f\"", `Invalid character "\\u001f"`, 4)
+}
 
-	// Unicode and control character tests - Go implementation repairs these instead of throwing errors
-	// Note: Go implementation is more lenient than TypeScript version
-	assertRepair(t, `"\u26"`, `"26"`)     // repairs invalid unicode by removing \u
-	assertRepair(t, `"\uZ000"`, `"Z000"`) // repairs invalid unicode by removing \u
-	assertRepair(t, `"\uZ000`, `"Z000"`)  // repairs invalid unicode and adds missing quote
+// assertRepairFailureExact checks that the error message and position match exactly
+func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expectedPos int) {
+	result, err := JSONRepair(text)
+	require.Error(t, err)
 
-	// Control characters are handled differently in Go - they're preserved rather than causing errors
-	// This is a design difference from the TypeScript version
-	result1, err1 := JSONRepair("\"abc\u0000\"")
-	require.NoError(t, err1)
-	assert.Contains(t, result1, "abc")
-
-	result2, err2 := JSONRepair("\"abc\u001f\"")
-	require.NoError(t, err2)
-	assert.Contains(t, result2, "abc")
+	var repairErr *JSONRepairError
+	require.True(t, errors.As(err, &repairErr))
+	assert.Equal(t, expectedErrMsg, repairErr.Message)
+	assert.Equal(t, expectedPos, repairErr.Position)
+	assert.Empty(t, result)
 }
 
 // assertRepairFailure is a helper function to check the JSON repair failure.
