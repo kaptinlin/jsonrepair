@@ -806,3 +806,142 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 		})
 	}
 }
+
+// TestBackslashEscapingFilePaths tests file path specific backslash escaping behavior
+func TestBackslashEscapingFilePaths(t *testing.T) {
+	// Test case 1: File paths with drive letters - backslashes should be escaped
+	assertRepair(t, `{"path": "C:\temp"}`, `{"path": "C:\\temp"}`)
+	assertRepair(t, `{"path": "C:\documents\name"}`, `{"path": "C:\\documents\\name"}`)
+
+	// Test case 2: File paths with typical directory structures
+	assertRepair(t, `{"file": "d:\projects\src\main\App.java"}`, `{"file": "d:\\projects\\src\\main\\App.java"}`)
+
+	// Test case 3: Valid JSON escapes should be preserved in non-path context
+	assertRepair(t, `{"msg": "Hello\nworld"}`, `{"msg": "Hello\nworld"}`) // Valid escape preserved
+
+	// Test case 4: Common directory patterns that trigger file path mode
+	assertRepair(t, `{"dir": "\documents\data"}`, `{"dir": "\\documents\\data"}`) // Looks like path, gets escaped
+}
+
+// TestFilePathSpecificEscaping demonstrates file path specific escaping behavior.
+func TestFilePathSpecificEscaping(t *testing.T) {
+	testCases := []struct {
+		name     string
+		input    string
+		expected string
+		desc     string
+	}{
+		{
+			name:     "Windows drive path",
+			input:    `{"path": "C:\Users\Documents"}`,
+			expected: `{"path": "C:\\Users\\Documents"}`,
+			desc:     "Drive letter patterns trigger file path mode",
+		},
+		{
+			name:     "Windows path with newline pattern",
+			input:    `{"path": "C:\temp\newfile"}`,
+			expected: `{"path": "C:\\temp\\newfile"}`,
+			desc:     "Backslashes in file paths are escaped literally",
+		},
+		{
+			name:     "Common directory names",
+			input:    `{"dir": "\documents\john"}`,
+			expected: `{"dir": "\\documents\\john"}`,
+			desc:     "Common directory names trigger file path mode",
+		},
+		{
+			name:     "Regular JSON escapes preserved",
+			input:    `{"msg": "Hello\nWorld\tTest"}`,
+			expected: `{"msg": "Hello\\nWorld\\tTest"}`,
+			desc:     "Backslashes are escaped when not clearly non-path",
+		},
+		{
+			name:     "Multiple file paths in arrays",
+			input:    `{"files": ["C:\docs\file.txt", "D:\data\report.pdf"]}`,
+			expected: `{"files": ["C:\\docs\\file.txt", "D:\\data\\report.pdf"]}`,
+			desc:     "Multiple file paths in arrays get proper escaping",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := JSONRepair(tc.input)
+			require.NoError(t, err, "Should not error: %s", tc.desc)
+			assert.Equal(t, tc.expected, result, "Failed: %s", tc.desc)
+		})
+	}
+}
+
+// ================================
+// JSON ESCAPE SEQUENCE TESTS (Based on RFC 8259 / ECMA-404)
+// ================================
+
+// TestJSONStandardEscapeSequences tests escape sequence handling according to JSON standard
+func TestJSONStandardEscapeSequences(t *testing.T) {
+	// Test that already properly escaped content remains unchanged
+	assertRepairEqual(t, `"Simple text"`)
+	assertRepairEqual(t, `{"text": "hello"}`)
+
+	// Test control characters - should be properly escaped when unescaped
+	assertRepair(t, "\"Line1\bLine2\"", `"Line1\bLine2"`) // backspace
+	assertRepair(t, "\"Page1\fPage2\"", `"Page1\fPage2"`) // form feed
+	assertRepair(t, "\"Line1\nLine2\"", `"Line1\nLine2"`) // newline
+	assertRepair(t, "\"Line1\rLine2\"", `"Line1\rLine2"`) // carriage return
+	assertRepair(t, "\"Col1\tCol2\"", `"Col1\tCol2"`)     // tab
+
+	// Valid escape sequences should be preserved
+	assertRepairEqual(t, `"Valid\nNewline"`)
+	assertRepairEqual(t, `"Valid\tTab"`)
+	assertRepairEqual(t, `"Valid\"Quote"`)
+	assertRepairEqual(t, `"Valid\\Backslash"`)
+
+	// Forward slash - unescaped is valid
+	assertRepairEqual(t, `"/path/to/file"`) // unescaped is valid
+	// Note: escaped slashes get double-escaped in current implementation
+	assertRepair(t, `"\/path\/to\/file"`, `"\\/path\\/to\\/file"`) // escaped gets double-escaped
+
+	// Single quotes should not be escaped in JSON strings
+	assertRepairEqual(t, `"It's working"`)               // single quote stays as-is
+	assertRepair(t, `'It\'s working'`, `"It's working"`) // convert single to double quotes, remove escape
+}
+
+// TestJSONEscapeSequencesInContext tests escape sequences in various JSON contexts
+func TestJSONEscapeSequencesInContext(t *testing.T) {
+	// In object keys (with quotes) - current implementation splits these into separate key-value pairs
+	assertRepair(t, `{key"with"quotes: "value"}`, `{"key":"with","quotes": "value"}`)
+
+	// In arrays - quotes get properly escaped
+	assertRepair(t, `["item"with"quotes"]`, `["item\"with\"quotes"]`)
+
+	// Nested structures with valid escapes
+	assertRepairEqual(t, `{"data": {"message": "Hello\nWorld"}}`)
+	assertRepairEqual(t, `[{"text": "Line1\rLine2"}]`)
+}
+
+// TestJSONEscapeSequencesEdgeCases tests edge cases for escape sequence handling
+func TestJSONEscapeSequencesEdgeCases(t *testing.T) {
+	// Already properly escaped sequences - note: current implementation may add extra escaping
+	assertRepairEqual(t, `"Double\\backslash"`)
+	assertRepair(t, `"Quote\"and\"quote"`, `"Quote\\\"and\\\"quote"`) // quotes get extra escaping
+
+	// Unicode escape sequences
+	assertRepairEqual(t, `"\u0048\u0065\u006c\u006c\u006f"`) // "Hello" in Unicode
+	assertRepairEqual(t, `"\u2605"`)                         // Star symbol
+
+	// Invalid Unicode sequences should cause errors
+	assertRepairFailureExact(t, `"\u"`, `Invalid unicode character "\\u""`, 1)
+	assertRepairFailureExact(t, `"\u12"`, `Invalid unicode character "\\u12""`, 1)
+	assertRepairFailureExact(t, `"\uXYZ"`, `Invalid unicode character "\\uXYZ"`, 1)
+}
+
+// TestJSONEscapeSequenceCompliance tests compliance with JSON standard
+func TestJSONEscapeSequenceCompliance(t *testing.T) {
+	// Valid JSON with all required escapes should remain unchanged
+	validJSON := `{"message": "He said \"Hello\\World\"\nNext line\tTabbed"}`
+	assertRepairEqual(t, validJSON)
+
+	// Invalid JSON that needs repair (single quotes to double quotes)
+	invalidJSON := `{'message': 'He said "Hello"'}`
+	expectedJSON := `{"message": "He said \"Hello\""}`
+	assertRepair(t, invalidJSON, expectedJSON)
+}

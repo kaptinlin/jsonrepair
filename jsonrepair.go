@@ -541,6 +541,9 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 		iBefore := *i
 		oBefore := output.Len()
 
+		// Analyze if this string might contain file paths
+		mightContainFilePaths := analyzePotentialFilePath(text, *i)
+
 		var str strings.Builder
 		str.WriteRune('"')
 		*i++
@@ -649,12 +652,21 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					*i++
 					return true, nil
 				}
+
 				char := (*text)[*i+1]
 				if _, ok := escapeCharacters[char]; ok {
-					str.WriteRune((*text)[*i])
-					str.WriteRune((*text)[*i+1])
-					*i += 2
+					if mightContainFilePaths {
+						// In file path context, escape the backslash as literal
+						str.WriteString("\\\\")
+						*i += 1
+					} else {
+						// Valid JSON escape character - keep as is
+						str.WriteRune((*text)[*i])
+						str.WriteRune((*text)[*i+1])
+						*i += 2
+					}
 				} else if char == 'u' {
+					// Handle Unicode escape sequences
 					j := 2
 					hexCount := 0
 					// Count valid hex characters
@@ -664,43 +676,79 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					}
 
 					if hexCount == 4 {
-						// Valid Unicode escape sequence
-						str.WriteString(string((*text)[*i : *i+6]))
-						*i += 6
+						if mightContainFilePaths {
+							// In file path context, escape the backslash as literal
+							str.WriteString("\\\\")
+							*i += 1
+						} else {
+							// Valid Unicode escape sequence - keep as is
+							str.WriteString(string((*text)[*i : *i+6]))
+							*i += 6
+						}
 					} else if *i+j >= len(*text) {
 						// repair invalid or truncated unicode char at the end of the text
 						// by removing the unicode char and ending the string here
 						*i = len(*text)
 					} else {
-						// Invalid Unicode escape sequence - try to capture complete intended sequence
-						// For "\uZ000", capture up to 4 chars after \u or until delimiter
-						endJ := 2 // Start after \u
-						for endJ < 6 && *i+endJ < len(*text) {
-							nextChar := (*text)[*i+endJ]
-							// Stop at whitespace or string delimiters
-							if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
-								break
+						// Invalid Unicode escape sequence
+						if mightContainFilePaths && hexCount == 0 && *i+2 < len(*text) {
+							// In file path context, \u followed by non-hex might be literal backslash
+							// For example: \users, \util, etc.
+							nextChar := (*text)[*i+2]
+							if (nextChar >= 'a' && nextChar <= 'z') || (nextChar >= 'A' && nextChar <= 'Z') {
+								// Looks like \users, \util - treat as literal backslash
+								str.WriteString("\\\\")
+								*i += 1
+							} else {
+								// Still looks like malformed Unicode escape - throw error
+								endJ := 2 // Start after \u
+								for endJ < 6 && *i+endJ < len(*text) {
+									nextChar := (*text)[*i+endJ]
+									if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
+										break
+									}
+									endJ++
+								}
+								chars := string((*text)[*i : *i+endJ])
+								escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
+								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
 							}
-							endJ++
-						}
-
-						chars := string((*text)[*i : *i+endJ])
-						// Format to match TypeScript
-						escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
-
-						// Add extra quote only for incomplete sequences like "\u26"
-						if hexCount < 4 && endJ == 2+hexCount {
-							// Incomplete sequence like "\u26" needs extra quote
-							return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"\"", escapedChars), *i)
 						} else {
-							// Complete but invalid sequence like "\uZ000"
-							return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
+							// Not in file path context or malformed Unicode - throw error
+							endJ := 2 // Start after \u
+							for endJ < 6 && *i+endJ < len(*text) {
+								nextChar := (*text)[*i+endJ]
+								// Stop at whitespace or string delimiters
+								if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
+									break
+								}
+								endJ++
+							}
+
+							chars := string((*text)[*i : *i+endJ])
+							// Format to match TypeScript
+							escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
+
+							// Add extra quote only for incomplete sequences like "\u26"
+							if hexCount < 4 && endJ == 2+hexCount {
+								// Incomplete sequence like "\u26" needs extra quote
+								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"\"", escapedChars), *i)
+							} else {
+								// Complete but invalid sequence like "\uZ000"
+								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
+							}
 						}
 					}
 				} else {
-					// repair invalid escape character: remove it
-					str.WriteRune(char)
-					*i += 2
+					if mightContainFilePaths {
+						// In file path context, escape the backslash as literal
+						str.WriteString("\\\\")
+						*i += 1
+					} else {
+						// Default behavior: remove invalid escape character
+						str.WriteRune(char)
+						*i += 2
+					}
 				}
 			} else {
 				// handle regular characters

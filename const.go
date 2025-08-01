@@ -47,7 +47,7 @@ const (
 	codeAcuteAccent             = 0xb4   // ´
 )
 
-// Define control and escape character mappings
+// Define control and escape character mappings according to JSON standard (RFC 8259)
 var controlCharacters = map[rune]string{
 	codeBackspace: `\b`,
 	codeFormFeed:  `\f`,
@@ -56,13 +56,15 @@ var controlCharacters = map[rune]string{
 	codeTab:       `\t`,
 }
 
+// JSON standard escape characters - these MUST be escaped or CAN be escaped in JSON strings
 var escapeCharacters = map[rune]string{
-	'"':  "\"",
-	'\\': "\\",
-	'/':  "/",
-	'b':  "\b",
-	'f':  "\f",
-	'n':  "\n",
-	'r':  "\r",
-	't':  "\t",
+	'"':  "\"", // MUST be escaped
+	'\\': "\\", // MUST be escaped
+	'/':  "/",  // CAN be escaped (optional)
+	'b':  "\b", // Backspace control character
+	'f':  "\f", // Form feed control character
+	'n':  "\n", // Newline control character
+	'r':  "\r", // Carriage return control character
+	't':  "\t", // Tab control character
+	// Note: 'u' is handled separately for Unicode escape sequences (\uXXXX)
 }
