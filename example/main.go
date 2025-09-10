@@ -1,3 +1,4 @@
+// Package main demonstrates usage of the jsonrepair library.
 package main
 
 import (

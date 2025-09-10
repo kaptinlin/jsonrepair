@@ -528,7 +528,7 @@ func TestShouldStripMongoDBDataTypes(t *testing.T) {
 			"decimal" : NumberDecimal("4"),
 			"decimal2" : NumberDecimal(4)
 		}`
-	expectedJson := `
+	expectedJSON := `
 		{
 			"_id" : "123",
 			"isoDate" : "2012-12-19T06:01:17.171Z",
@@ -540,7 +540,7 @@ func TestShouldStripMongoDBDataTypes(t *testing.T) {
 			"decimal" : "4",
 			"decimal2" : 4
 		}`
-	assertRepair(t, mongoDocument, expectedJson)
+	assertRepair(t, mongoDocument, expectedJSON)
 }
 
 // TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString tests not matching MongoDB-like functions in an unquoted string.
@@ -744,7 +744,7 @@ func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expecte
 	result, err := JSONRepair(text)
 	require.Error(t, err)
 
-	var repairErr *JSONRepairError
+	var repairErr *Error
 	require.True(t, errors.As(err, &repairErr))
 	assert.Equal(t, expectedErrMsg, repairErr.Message)
 	assert.Equal(t, expectedPos, repairErr.Position)

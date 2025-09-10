@@ -224,12 +224,12 @@ func isWhitespaceExceptNewline(code rune) bool {
 }
 
 // URL-related regular expressions and functions
-var regexUrlStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
-var regexUrlChar = regexp.MustCompile(`^[A-Za-z0-9\-._~:/?#@!$&'()*+;=]$`)
+var regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
+var regexURLChar = regexp.MustCompile(`^[A-Za-z0-9\-._~:/?#@!$&'()*+;=]$`)
 
-// isUrlChar checks if a rune is a valid URL character.
-func isUrlChar(code rune) bool {
-	return regexUrlChar.MatchString(string(code))
+// isURLChar checks if a rune is a valid URL character.
+func isURLChar(code rune) bool {
+	return regexURLChar.MatchString(string(code))
 }
 
 // Regular expression cache for improved performance

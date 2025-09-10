@@ -15,62 +15,62 @@ var (
 	ErrInvalidUnicode      = errors.New("invalid unicode character")
 )
 
-// JSONRepairError represents a structured JSON repair error.
+// Error represents a structured JSON repair error.
 // It provides the error message, position, and optional underlying error
-type JSONRepairError struct {
+type Error struct {
 	Message  string
 	Position int
 	Err      error // optional underlying error
 }
 
 // Error implements the error interface
-func (e *JSONRepairError) Error() string {
+func (e *Error) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("%s at position %d: %v", e.Message, e.Position, e.Err)
 	}
 	return fmt.Sprintf("%s at position %d", e.Message, e.Position)
 }
 
-// Unwrap allows JSONRepairError to support errors.Is / errors.As
-func (e *JSONRepairError) Unwrap() error {
+// Unwrap allows Error to support errors.Is / errors.As
+func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// newJSONRepairError creates a new JSONRepairError with optional error wrapping
+// newJSONRepairError creates a new Error with optional error wrapping
 // Usage:
 //
 //	newJSONRepairError("Unexpected character", 42)
 //	newJSONRepairError("Invalid unicode character", 13, ErrInvalidUnicode)
 //	newJSONRepairError("Unexpected character", 42, ErrUnexpectedCharacter)
-func newJSONRepairError(message string, position int, err ...error) *JSONRepairError {
+func newJSONRepairError(message string, position int, err ...error) *Error {
 	var inner error
 	if len(err) > 0 {
 		inner = err[0]
 	}
-	return &JSONRepairError{Message: message, Position: position, Err: inner}
+	return &Error{Message: message, Position: position, Err: inner}
 }
 
 // Convenience functions for creating specific error types with predefined errors wrapped
-func newUnexpectedEndError(position int) *JSONRepairError {
+func newUnexpectedEndError(position int) *Error {
 	return newJSONRepairError("Unexpected end of json string", position, ErrUnexpectedEnd)
 }
 
-func newObjectKeyExpectedError(position int) *JSONRepairError {
+func newObjectKeyExpectedError(position int) *Error {
 	return newJSONRepairError("Object key expected", position, ErrObjectKeyExpected)
 }
 
-func newColonExpectedError(position int) *JSONRepairError {
+func newColonExpectedError(position int) *Error {
 	return newJSONRepairError("Colon expected", position, ErrColonExpected)
 }
 
-func newUnexpectedCharacterError(message string, position int) *JSONRepairError {
+func newUnexpectedCharacterError(message string, position int) *Error {
 	return newJSONRepairError(message, position, ErrUnexpectedCharacter)
 }
 
-func newInvalidUnicodeError(message string, position int) *JSONRepairError {
+func newInvalidUnicodeError(message string, position int) *Error {
 	return newJSONRepairError(message, position, ErrInvalidUnicode)
 }
 
-func newInvalidCharacterError(message string, position int) *JSONRepairError {
+func newInvalidCharacterError(message string, position int) *Error {
 	return newJSONRepairError(message, position, ErrInvalidCharacter)
 }

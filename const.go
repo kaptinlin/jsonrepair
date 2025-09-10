@@ -1,3 +1,4 @@
+// Package jsonrepair provides functionality to repair malformed JSON strings.
 package jsonrepair
 
 // Define character codes

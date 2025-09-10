@@ -528,13 +528,14 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 
 	if *i < len(*text) && isQuote((*text)[*i]) {
 		isEndQuote := func(r rune) bool { return r == (*text)[*i] }
-		if isDoubleQuote((*text)[*i]) {
+		switch {
+		case isDoubleQuote((*text)[*i]):
 			isEndQuote = isDoubleQuote
-		} else if isSingleQuote((*text)[*i]) {
+		case isSingleQuote((*text)[*i]):
 			isEndQuote = isSingleQuote
-		} else if isSingleQuoteLike((*text)[*i]) {
+		case isSingleQuoteLike((*text)[*i]):
 			isEndQuote = isSingleQuoteLike
-		} else if isDoubleQuoteLike((*text)[*i]) {
+		case isDoubleQuoteLike((*text)[*i]):
 			isEndQuote = isDoubleQuoteLike
 		}
 
@@ -576,7 +577,8 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				return true, nil
 			}
 
-			if isEndQuote((*text)[*i]) {
+			switch {
+			case isEndQuote((*text)[*i]):
 				// end quote
 				iQuote := *i
 				oQuote := str.Len()
@@ -600,15 +602,14 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				iPrevChar := prevNonWhitespaceIndex(*text, iQuote-1)
 				if iPrevChar != -1 {
 					prevChar := (*text)[iPrevChar]
-					if prevChar == ',' {
+					switch {
+					case prevChar == ',':
 						*i = iBefore
 						tempStr := output.String()
 						output.Reset()
 						output.WriteString(tempStr[:oBefore])
 						return parseString(text, i, output, false, iPrevChar)
-					}
-
-					if isDelimiter(prevChar) {
+					case isDelimiter(prevChar):
 						*i = iBefore
 						tempStr := output.String()
 						output.Reset()
@@ -627,11 +628,11 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				revertedStr := str.String()[:oQuote] + "\\\""
 				str.Reset()
 				str.WriteString(revertedStr)
-			} else if stopAtDelimiter && isUnquotedStringDelimiter((*text)[*i]) {
+			case stopAtDelimiter && isUnquotedStringDelimiter((*text)[*i]):
 				// we're in the mode to stop the string at the first delimiter
 				// because there is an end quote missing
-				if *i > 0 && (*text)[*i-1] == ':' && regexUrlStart.MatchString(string((*text)[iBefore+1:*i+2])) {
-					for *i < len(*text) && regexUrlChar.MatchString(string((*text)[*i])) {
+				if *i > 0 && (*text)[*i-1] == ':' && regexURLStart.MatchString(string((*text)[iBefore+1:*i+2])) {
+					for *i < len(*text) && regexURLChar.MatchString(string((*text)[*i])) {
 						str.WriteRune((*text)[*i])
 						*i++
 					}
@@ -642,7 +643,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				output.WriteString(strStr)
 				parseConcatenatedString(text, i, output)
 				return true, nil
-			} else if (*text)[*i] == '\\' {
+			case (*text)[*i] == '\\':
 				// handle escaped content like \n or \u2605
 				if *i+1 >= len(*text) {
 					// repair: incomplete escape sequence at end of string
@@ -658,7 +659,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					if mightContainFilePaths {
 						// In file path context, escape the backslash as literal
 						str.WriteString("\\\\")
-						*i += 1
+						*i++
 					} else {
 						// Valid JSON escape character - keep as is
 						str.WriteRune((*text)[*i])
@@ -675,21 +676,22 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 						hexCount++
 					}
 
-					if hexCount == 4 {
+					switch {
+					case hexCount == 4:
 						if mightContainFilePaths {
 							// In file path context, escape the backslash as literal
 							str.WriteString("\\\\")
-							*i += 1
+							*i++
 						} else {
 							// Valid Unicode escape sequence - keep as is
 							str.WriteString(string((*text)[*i : *i+6]))
 							*i += 6
 						}
-					} else if *i+j >= len(*text) {
+					case *i+j >= len(*text):
 						// repair invalid or truncated unicode char at the end of the text
 						// by removing the unicode char and ending the string here
 						*i = len(*text)
-					} else {
+					default:
 						// Invalid Unicode escape sequence
 						if mightContainFilePaths && hexCount == 0 && *i+2 < len(*text) {
 							// In file path context, \u followed by non-hex might be literal backslash
@@ -698,7 +700,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							if (nextChar >= 'a' && nextChar <= 'z') || (nextChar >= 'A' && nextChar <= 'Z') {
 								// Looks like \users, \util - treat as literal backslash
 								str.WriteString("\\\\")
-								*i += 1
+								*i++
 							} else {
 								// Still looks like malformed Unicode escape - throw error
 								endJ := 2 // Start after \u
@@ -733,37 +735,37 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							if hexCount < 4 && endJ == 2+hexCount {
 								// Incomplete sequence like "\u26" needs extra quote
 								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"\"", escapedChars), *i)
-							} else {
-								// Complete but invalid sequence like "\uZ000"
-								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
 							}
+							// Complete but invalid sequence like "\uZ000"
+							return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
 						}
 					}
 				} else {
 					if mightContainFilePaths {
 						// In file path context, escape the backslash as literal
 						str.WriteString("\\\\")
-						*i += 1
+						*i++
 					} else {
 						// Default behavior: remove invalid escape character
 						str.WriteRune(char)
 						*i += 2
 					}
 				}
-			} else {
+			default:
 				// handle regular characters
 				char := (*text)[*i]
-				if char == '"' && (*text)[*i-1] != '\\' {
+				switch {
+				case char == '"' && (*text)[*i-1] != '\\':
 					// repair unescaped double quote
 					str.WriteString("\\\"")
 					*i++
-				} else if isControlCharacter(char) {
+				case isControlCharacter(char):
 					// unescaped control character
 					if replacement, ok := controlCharacters[char]; ok {
 						str.WriteString(replacement)
 					}
 					*i++
-				} else {
+				default:
 					// Check character validity - matches TypeScript throwInvalidCharacter()
 					if !isValidStringCharacter(char) {
 						// Format control characters as Unicode escape sequences to match TypeScript
@@ -978,18 +980,19 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	// Check if this starts with a URL pattern (only when not parsing a key)
 	isURL := false
 	if !isKey {
-		if start+8 <= len(*text) && string((*text)[start:start+8]) == "https://" {
+		switch {
+		case start+8 <= len(*text) && string((*text)[start:start+8]) == "https://":
 			isURL = true
-		} else if start+7 <= len(*text) && string((*text)[start:start+7]) == "http://" {
+		case start+7 <= len(*text) && string((*text)[start:start+7]) == "http://":
 			isURL = true
-		} else if start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://" {
+		case start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://":
 			isURL = true
 		}
 	}
 
 	if isURL {
 		// Parse as URL - continue until we hit a proper delimiter (not slash)
-		for *i < len(*text) && isUrlChar((*text)[*i]) {
+		for *i < len(*text) && isURLChar((*text)[*i]) {
 			*i++
 		}
 	} else {
