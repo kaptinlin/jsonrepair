@@ -154,6 +154,11 @@ func TestShouldRepairComplexStringCases(t *testing.T) {
 	assertRepair(t, `[1,"hello,world,"2]`, `[1,"hello,world",2]`)
 }
 
+// TestShouldRepairEscapedCommaBeforeDelimiter tests repairing escaped commas before delimiters.
+func TestShouldRepairEscapedCommaBeforeDelimiter(t *testing.T) {
+	assertRepair(t, "\"foo\\,\"x", "[\n\"foo\",\"x\"\n]")
+}
+
 // TestShouldParseUnquotedString tests parsing unquoted strings.
 func TestShouldParseUnquotedString(t *testing.T) {
 	assertRepair(t, `hello world`, `"hello world"`)

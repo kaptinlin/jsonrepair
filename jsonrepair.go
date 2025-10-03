@@ -741,6 +741,13 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 						}
 					}
 				} else {
+					if stopAtIndex != -1 && *i == stopAtIndex-1 && isDelimiter((*text)[stopAtIndex]) {
+						// stop before the delimiter that triggered reparsing to avoid infinite recursion
+						output.WriteString(insertBeforeLastWhitespace(str.String(), "\""))
+						*i = stopAtIndex
+						return true, nil
+					}
+
 					if mightContainFilePaths {
 						// In file path context, escape the backslash as literal
 						str.WriteString("\\\\")
