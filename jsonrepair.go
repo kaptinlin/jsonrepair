@@ -1076,7 +1076,7 @@ func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 
 // parseMarkdownCodeBlock parses and skips Markdown fenced code blocks like ``` or ```json
 func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
-	if skipMarkdownCodeBlock(text, i, blocks) {
+	if skipMarkdownCodeBlock(text, i, blocks, output) {
 		if *i < len(*text) && isFunctionNameCharStart((*text)[*i]) {
 			// Strip the optional language specifier like "json"
 			for *i < len(*text) && isFunctionNameChar((*text)[*i]) {
@@ -1100,7 +1100,10 @@ func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strin
 }
 
 // skipMarkdownCodeBlock checks if we're at a Markdown code block marker and skips it
-func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string) bool {
+func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
+	// Parse whitespace before checking for code block markers
+	parseWhitespace(text, i, output, true)
+
 	for _, block := range blocks {
 		blockRunes := []rune(block)
 		end := *i + len(blockRunes)
