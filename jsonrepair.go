@@ -631,7 +631,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 			case stopAtDelimiter && isUnquotedStringDelimiter((*text)[*i]):
 				// we're in the mode to stop the string at the first delimiter
 				// because there is an end quote missing
-				if *i > 0 && (*text)[*i-1] == ':' && regexURLStart.MatchString(string((*text)[iBefore+1:*i+2])) {
+				if *i > 0 && (*text)[*i-1] == ':' && regexURLStart.MatchString(string((*text)[iBefore+1:min(*i+2, len(*text))])) {
 					for *i < len(*text) && regexURLChar.MatchString(string((*text)[*i])) {
 						str.WriteRune((*text)[*i])
 						*i++

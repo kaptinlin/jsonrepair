@@ -3,6 +3,7 @@ package jsonrepair
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -136,6 +137,13 @@ func TestShouldRepairMissingEndQuoteAdvanced(t *testing.T) {
 	assertRepair(t, `{"text": "She said:`, `{"text": "She said:"}`)
 	assertRepair(t, `["hello, world]`, `["hello", "world"]`)
 	assertRepair(t, `["hello,"world"]`, `["hello","world"]`)
+}
+
+func TestShouldRepairLongTruncatedURL(t *testing.T) {
+	pad := strings.Repeat("a", 23)
+	input := fmt.Sprintf("[\"%shttps:/", pad)
+	expected := fmt.Sprintf("[\"%shttps:\",\"/\"]", pad)
+	assertRepair(t, input, expected)
 }
 
 // TestShouldRepairStringWithCommas tests strings containing commas that need special handling.
