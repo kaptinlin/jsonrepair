@@ -959,3 +959,31 @@ func TestJSONEscapeSequenceCompliance(t *testing.T) {
 	expectedJSON := `{"message": "He said \"Hello\""}`
 	assertRepair(t, invalidJSON, expectedJSON)
 }
+
+// BenchmarkJSONRepair benchmarks the JSON repair function across various scenarios
+func BenchmarkJSONRepair(b *testing.B) {
+	testCases := []struct {
+		name  string
+		input string
+	}{
+		{"valid_json", `{"a":2.3e100,"b":"str","c":null,"d":false,"e":[1,2,3]}`},
+		{"unquoted_keys", `{name: 'John', age: 30}`},
+		{"missing_quotes", `["hello world]`},
+		{"truncated", `{"foo":"bar`},
+		{"python_constants", `{"success": True, "value": None}`},
+		{"trailing_comma", `{"a":1,"b":2,}`},
+		{"comments", `{"a":1,/*comment*/"b":2}`},
+		{"single_quotes", `{'a':'b','c':'d'}`},
+		{"nested_objects", `{"a":{"b":{"c":{"d":1}}}}`},
+		{"large_array", `[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]`},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				_, _ = JSONRepair(tc.input)
+			}
+		})
+	}
+}
