@@ -88,14 +88,12 @@ func isValidStringCharacter(char rune) bool {
 
 // isDelimiter checks if a character is a delimiter.
 func isDelimiter(char rune) bool {
-	return regexDelimiter.MatchString(string(char))
+	switch char {
+	case ',', ':', '[', ']', '/', '{', '}', '(', ')', '\n', '+':
+		return true
+	}
+	return false
 }
-
-// regexDelimiter matches a single JSON delimiter character used to separate tokens.
-// The character class explicitly lists all delimiter characters and escapes special
-// characters to prevent unintended character ranges (e.g. ":[" would otherwise
-// create a range from ':' to '[').
-var regexDelimiter = regexp.MustCompile(`^[,:\[\]/{}()\n\+]$`)
 
 // isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(char rune) bool {
@@ -210,13 +208,15 @@ func isFunctionNameChar(code rune) bool {
 }
 
 // isUnquotedStringDelimiter checks if a character is a delimiter for unquoted strings.
-func isUnquotedStringDelimiter(char rune) bool {
-	return regexUnquotedStringDelimiter.MatchString(string(char))
-}
-
-// Similar to regexDelimiter but without ':' since a colon is allowed inside an
+// Similar to isDelimiter but without ':' since a colon is allowed inside an
 // unquoted value until we detect a key/value separator.
-var regexUnquotedStringDelimiter = regexp.MustCompile(`^[,\[\]/{}\n\+]$`)
+func isUnquotedStringDelimiter(char rune) bool {
+	switch char {
+	case ',', '[', ']', '/', '{', '}', '\n', '+':
+		return true
+	}
+	return false
+}
 
 // isWhitespaceExceptNewline checks if a rune is a whitespace character except newline.
 func isWhitespaceExceptNewline(code rune) bool {
@@ -241,6 +241,56 @@ var (
 	unicodeEscapeRe = regexp.MustCompile(`\\u[0-9a-fA-F]{4}`)
 	urlEncodingRe   = regexp.MustCompile(`%[0-9a-fA-F]{2}`)
 )
+
+// ================================
+// PATH PATTERN CONSTANTS
+// ================================
+
+// windowsPathPatterns contains common Windows directory patterns for path detection.
+var windowsPathPatterns = []string{
+	// System directories
+	"program files", "system32", "windows\\", "programdata",
+	// User directories
+	"users\\", "documents", "desktop", "downloads", "music", "pictures", "videos", "appdata", "roaming", "public",
+	// System functional directories
+	"temp\\", "fonts", "startup", "sendto", "recent", "nethood", "cookies", "cache", "history", "favorites", "templates",
+}
+
+// unixPathPatterns contains common Unix/macOS directory patterns for path detection.
+var unixPathPatterns = []string{
+	// Standard Unix directories
+	"/bin/", "/etc/", "/var/", "/usr/", "/opt/", "/home/", "/tmp/", "/lib/", "/lib64/",
+	// System directories
+	"/proc/", "/dev/", "/sys/", "/run/", "/srv/", "/mnt/", "/media/", "/boot/", "/snap/",
+	// Application and data directories
+	"/usr/share/", "/usr/local/", "/usr/src/", "/var/log/", "/var/lib/", "/var/cache/", "/var/spool/",
+	// macOS specific directories
+	"/Applications/", "/Library/", "/System/", "/Users/",
+}
+
+// commonFileExtensions contains file extensions commonly found in file paths.
+var commonFileExtensions = []string{
+	// Configuration files
+	".config", ".cfg", ".ini", ".conf", ".properties", ".toml",
+	// Data formats
+	".json", ".xml", ".yml", ".yaml", ".csv", ".tsv",
+	// Backup and temporary files
+	".backup", ".bak", ".old", ".tmp", ".temp", ".swp", ".~",
+	// Log and debug files
+	".log", ".out", ".err", ".debug", ".trace",
+	// Database files
+	".db", ".sqlite", ".sqlite3", ".mdb",
+	// Document files
+	".txt", ".md", ".readme", ".doc", ".docx", ".pdf",
+	// Archive files
+	".zip", ".tar", ".gz", ".rar", ".7z", ".bz2", ".xz",
+	// Code files
+	".js", ".ts", ".py", ".go", ".java", ".cpp", ".c", ".h", ".cs", ".php", ".rb", ".rs",
+	// Media files
+	".mp3", ".mp4", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico",
+	// Data files
+	".dat", ".bin", ".raw", ".dump",
+}
 
 // ================================
 // EARLY EXCLUSION FILTERS
@@ -533,91 +583,106 @@ func hasReasonableCharacterDistribution(content string) bool {
 // MAIN PATH DETECTION
 // ================================
 
+// matchesWindowsPathPattern checks if content matches common Windows directory patterns.
+func matchesWindowsPathPattern(lowerContent, content string) bool {
+	for _, pattern := range windowsPathPatterns {
+		if strings.Contains(lowerContent, pattern) && containsPathSeparator(content) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchesUnixPathPattern checks if content matches common Unix/macOS directory patterns.
+func matchesUnixPathPattern(lowerContent string) bool {
+	for _, pattern := range unixPathPatterns {
+		if strings.Contains(lowerContent, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasCommonFileExtension checks if content ends with a common file extension.
+func hasCommonFileExtension(lowerContent string) bool {
+	for _, ext := range commonFileExtensions {
+		if strings.HasSuffix(lowerContent, ext) {
+			return true
+		}
+	}
+	return false
+}
+
+// isExcludedURL checks if content is a URL that should be excluded from path detection.
+func isExcludedURL(lowerContent, content string) bool {
+	// HTTP/HTTPS URLs
+	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
+		return true
+	}
+	// FTP URLs without file paths
+	if strings.HasPrefix(lowerContent, "ftp://") && !strings.Contains(content[6:], "/") {
+		return true
+	}
+	return false
+}
+
+// passesEarlyExclusionFilters checks if content passes all early exclusion filters.
+func passesEarlyExclusionFilters(content string) bool {
+	if hasExcessiveEscapeSequences(content) {
+		return false
+	}
+	if isLikelyTextBlob(content) {
+		return false
+	}
+	if isBase64String(content) {
+		return false
+	}
+	if hasURLEncoding(content) {
+		return false
+	}
+	return true
+}
+
+// matchesAbsolutePathFormat checks if content matches any absolute path format.
+func matchesAbsolutePathFormat(content string) bool {
+	return isURLPath(content) ||
+		isWindowsAbsolutePath(content) ||
+		isUNCPath(content) ||
+		isUnixAbsolutePath(content)
+}
+
 // isLikelyFilePath determines if a string content looks like a file path
-// using a structured, layer-based approach
+// using a structured, layer-based approach.
 func isLikelyFilePath(content string) bool {
 	if len(content) < 2 {
 		return false
 	}
 
-	// EARLY STRONG EXCLUSIONS: HTTP/HTTPS URLs
 	lowerContent := strings.ToLower(content)
-	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
-		return false
-	}
 
-	// Early exclude FTP URLs without file paths
-	if strings.HasPrefix(lowerContent, "ftp://") && !strings.Contains(content[6:], "/") {
+	// Early URL exclusions
+	if isExcludedURL(lowerContent, content) {
 		return false
 	}
 
 	// Early exclusion filters
-	if hasExcessiveEscapeSequences(content) {
-		return false
-	}
-
-	if isLikelyTextBlob(content) {
-		return false
-	}
-
-	if isBase64String(content) {
-		return false
-	}
-
-	if hasURLEncoding(content) {
+	if !passesEarlyExclusionFilters(content) {
 		return false
 	}
 
 	// Format-specific detection (high confidence)
-	if isURLPath(content) {
+	if matchesAbsolutePathFormat(content) {
 		return true
 	}
 
-	if isWindowsAbsolutePath(content) {
-		return true
-	}
-
-	if isUNCPath(content) {
-		return true
-	}
-
-	if isUnixAbsolutePath(content) {
-		return true
-	}
-
-	// Additional pattern detection for common paths
 	// Check for common Windows directory patterns
-	windowsPatterns := []string{
-		// System directories
-		"program files", "system32", "windows\\", "programdata",
-		// User directories
-		"users\\", "documents", "desktop", "downloads", "music", "pictures", "videos", "appdata", "roaming", "public",
-		// System functional directories
-		"temp\\", "fonts", "startup", "sendto", "recent", "nethood", "cookies", "cache", "history", "favorites", "templates",
-	}
-	for _, pattern := range windowsPatterns {
-		if strings.Contains(lowerContent, pattern) && containsPathSeparator(content) {
-			return true
-		}
+	if matchesWindowsPathPattern(lowerContent, content) {
+		return true
 	}
 
 	// Check for Unix system directory patterns
-	if strings.Contains(content, "/") {
-		unixPatterns := []string{
-			// Standard Unix directories
-			"/bin/", "/etc/", "/var/", "/usr/", "/opt/", "/home/", "/tmp/", "/lib/", "/lib64/",
-			// System directories
-			"/proc/", "/dev/", "/sys/", "/run/", "/srv/", "/mnt/", "/media/", "/boot/", "/snap/",
-			// Application and data directories
-			"/usr/share/", "/usr/local/", "/usr/src/", "/var/log/", "/var/lib/", "/var/cache/", "/var/spool/",
-			// macOS specific directories
-			"/Applications/", "/Library/", "/System/", "/Users/",
-		}
-		for _, pattern := range unixPatterns {
-			if strings.Contains(lowerContent, pattern) {
-				return true
-			}
-		}
+	if strings.Contains(content, "/") && matchesUnixPathPattern(lowerContent) {
+		return true
 	}
 
 	// Structural validation for relative paths
@@ -625,35 +690,9 @@ func isLikelyFilePath(content string) bool {
 		return false
 	}
 
-	// Relaxed check for simple backup/config files with common extensions
-	if hasFileExtension(content) {
-		commonFileExts := []string{
-			// Configuration files
-			".config", ".cfg", ".ini", ".conf", ".properties", ".toml",
-			// Data formats
-			".json", ".xml", ".yml", ".yaml", ".csv", ".tsv",
-			// Backup and temporary files
-			".backup", ".bak", ".old", ".tmp", ".temp", ".swp", ".~",
-			// Log and debug files
-			".log", ".out", ".err", ".debug", ".trace",
-			// Database files
-			".db", ".sqlite", ".sqlite3", ".mdb",
-			// Document files
-			".txt", ".md", ".readme", ".doc", ".docx", ".pdf",
-			// Archive files
-			".zip", ".tar", ".gz", ".rar", ".7z", ".bz2", ".xz",
-			// Code files
-			".js", ".ts", ".py", ".go", ".java", ".cpp", ".c", ".h", ".cs", ".php", ".rb", ".rs",
-			// Media files
-			".mp3", ".mp4", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico", ".mp3", ".mp4", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico",
-			// Data files
-			".dat", ".bin", ".raw", ".dump",
-		}
-		for _, ext := range commonFileExts {
-			if strings.HasSuffix(lowerContent, ext) {
-				return true
-			}
-		}
+	// Check for common file extensions
+	if hasFileExtension(content) && hasCommonFileExtension(lowerContent) {
+		return true
 	}
 
 	if !hasReasonableCharacterDistribution(content) {

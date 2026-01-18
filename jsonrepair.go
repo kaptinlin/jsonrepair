@@ -62,24 +62,9 @@ func JSONRepair(text string) (string, error) {
 		return output.String(), nil
 	}
 
-	// Check for specific unrepairable cases based on TypeScript version behavior
-	// These are cases where we have remaining characters that can't be processed
+	// Check for remaining characters that can't be processed
 	if i < len(runes) {
 		char := runes[i]
-
-		// Check if this looks like the problematic cases from TypeScript tests:
-		// 1. "callback {}" - invalid JSONP without parentheses
-		// 2. "{"a":2}foo" - extra content after valid JSON
-		// 3. "foo [" - invalid content
-
-		// Special case for current Go test format (temporary, to be unified later)
-		if string(char) == "{" && i == 9 {
-			// This matches the existing Go test expectation for "callback {}"
-			message := fmt.Sprintf("unexpected character: '%c' at position %d", char, i)
-			return "", newUnexpectedCharacterError(message, i)
-		}
-
-		// Default format for other cases
 		message := fmt.Sprintf("Unexpected character %q", string(char))
 		return "", newUnexpectedCharacterError(message, i)
 	}
@@ -101,7 +86,10 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	}
 
 	// Try other parsers with original logic
-	processed := parseArray(text, i, output)
+	processed, err := parseArray(text, i, output)
+	if err != nil {
+		return false, err
+	}
 	if !processed {
 		// Try parseString and handle errors (matches TypeScript version)
 		stringProcessed, err := parseString(text, i, output, false, -1)
@@ -115,8 +103,6 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			parseRegex(text, i, output)
 	}
 	parseWhitespaceAndSkipComments(text, i, output, true)
-
-	// Post-parsing validation removed - errors should be detected during parsing
 
 	return processed, nil
 }
@@ -284,15 +270,11 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 						output.WriteString(temp)
 					}
 				} else {
-					// repair missing comma (original logic)
+					// repair missing comma - restore output to oBefore and insert comma
 					*i = iBefore
-					tempStr := output.String()
+					tempStr := output.String()[:oBefore]
 					output.Reset()
-					output.WriteString(tempStr[:oBefore])
-
-					outputStr := insertBeforeLastWhitespace(output.String(), ",")
-					output.Reset()
-					output.WriteString(outputStr)
+					output.WriteString(insertBeforeLastWhitespace(tempStr, ","))
 				}
 			} else {
 				initial = false
@@ -369,9 +351,10 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 }
 
 // parseArray parses an array from the input text.
-func parseArray(text *[]rune, i *int, output *strings.Builder) bool {
+// Returns (success, error) where error is non-nil for non-repairable issues
+func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	if *i >= len(*text) {
-		return false
+		return false, nil
 	}
 
 	if (*text)[*i] == codeOpeningBracket {
@@ -411,7 +394,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) bool {
 			processedValue, err := parseValue(text, i, output)
 			if err != nil {
 				// Forward error from parseValue
-				return false
+				return false, err
 			}
 
 			// Clean up a trailing comma that is **inside** a JSON string when
@@ -468,9 +451,9 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) bool {
 			output.Reset()
 			output.WriteString(outputStr)
 		}
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }
 
 // parseNewlineDelimitedJSON parses Newline Delimited JSON (NDJSON) from the input text.

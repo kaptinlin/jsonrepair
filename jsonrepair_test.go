@@ -421,7 +421,7 @@ func TestShouldStripJSONPNotation(t *testing.T) {
 	assertRepair(t, "  /* foo bar */   callback_123({});  ", "     {}  ")
 	assertRepair(t, "\n/* foo\nbar */\ncallback_123 ({});\n\n", "\n\n{}\n\n")
 	// non-matching
-	assertRepairFailure(t, `callback {}`, `unexpected character: '{'`, 9)
+	assertRepairFailureExact(t, `callback {}`, `Unexpected character "{"`, 9)
 }
 
 // TestShouldRepairEscapedStringContents tests repairing escaped string contents in JSON strings.
@@ -762,15 +762,6 @@ func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expecte
 	require.True(t, errors.As(err, &repairErr))
 	assert.Equal(t, expectedErrMsg, repairErr.Message)
 	assert.Equal(t, expectedPos, repairErr.Position)
-	assert.Empty(t, result)
-}
-
-// assertRepairFailure is a helper function to check the JSON repair failure.
-func assertRepairFailure(t *testing.T, text, expectedErrMsg string, expectedPos int) {
-	result, err := JSONRepair(text)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), expectedErrMsg)
-	assert.Contains(t, err.Error(), fmt.Sprintf("%d", expectedPos))
 	assert.Empty(t, result)
 }
 
