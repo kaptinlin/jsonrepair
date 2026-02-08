@@ -1,7 +1,6 @@
-// Package jsonrepair provides functionality to repair malformed JSON strings.
 package jsonrepair
 
-// Define character codes
+// Character code constants used for JSON parsing.
 const (
 	codeBackslash               = 0x5c // "\"
 	codeSlash                   = 0x2f // "/"
@@ -34,12 +33,12 @@ const (
 	codeLowercaseE              = 0x65 // "e"
 	codeUppercaseF              = 0x46 // "F"
 	codeLowercaseF              = 0x66 // "f"
-	codeNonBreakingSpace        = 0xa0
-	codeEnQuad                  = 0x2000
-	codeHairSpace               = 0x200a
-	codeNarrowNoBreakSpace      = 0x202f
-	codeMediumMathematicalSpace = 0x205f
-	codeIdeographicSpace        = 0x3000
+	codeNonBreakingSpace        = 0xa0   // non-breaking space
+	codeEnQuad                  = 0x2000 // en quad (start of special whitespace range)
+	codeHairSpace               = 0x200a // hair space (end of special whitespace range)
+	codeNarrowNoBreakSpace      = 0x202f // narrow no-break space
+	codeMediumMathematicalSpace = 0x205f // medium mathematical space
+	codeIdeographicSpace        = 0x3000 // ideographic space
 	codeDoubleQuoteLeft         = 0x201c // “
 	codeDoubleQuoteRight        = 0x201d // ”
 	codeQuoteLeft               = 0x2018 // ‘
@@ -48,7 +47,8 @@ const (
 	codeAcuteAccent             = 0xb4   // ´
 )
 
-// Define control and escape character mappings according to JSON standard (RFC 8259)
+// controlCharacters maps control character runes to their JSON escape sequences
+// according to the JSON standard (RFC 8259).
 var controlCharacters = map[rune]string{
 	codeBackspace: `\b`,
 	codeFormFeed:  `\f`,
@@ -57,7 +57,8 @@ var controlCharacters = map[rune]string{
 	codeTab:       `\t`,
 }
 
-// JSON standard escape characters - these MUST be escaped or CAN be escaped in JSON strings
+// escapeCharacters maps JSON standard escape characters to their unescaped values.
+// These MUST be escaped or CAN be escaped in JSON strings.
 var escapeCharacters = map[rune]string{
 	'"':  "\"", // MUST be escaped
 	'\\': "\\", // MUST be escaped

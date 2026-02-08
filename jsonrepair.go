@@ -1,13 +1,20 @@
+// Package jsonrepair provides functionality to repair malformed JSON strings.
+// It handles JSON content commonly found in LLM outputs, JavaScript code snippets,
+// and various JSON-like formats, automatically fixing malformed documents.
 package jsonrepair
 
 import (
+	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 )
 
-// JSONRepair attempts to repair the given JSON string and returns the repaired version.
-func JSONRepair(text string) (string, error) {
+// Repair attempts to repair the given JSON string and returns the repaired version.
+// It handles common issues such as missing quotes, trailing commas, comments,
+// single quotes, and truncated JSON. If the input is empty, it returns an error.
+// If the JSON contains non-repairable issues, a structured [*Error] is returned
+// with the position and description of the problem.
+func Repair(text string) (string, error) {
 	// Check for empty input - matches TypeScript version behavior
 	if len(text) == 0 {
 		return "", newUnexpectedEndError(0)
@@ -62,18 +69,19 @@ func JSONRepair(text string) (string, error) {
 		return output.String(), nil
 	}
 
-	// Check for remaining characters that can't be processed
-	if i < len(runes) {
-		char := runes[i]
-		message := fmt.Sprintf("Unexpected character %q", string(char))
-		return "", newUnexpectedCharacterError(message, i)
-	}
+	message := fmt.Sprintf("unexpected character %q", string(runes[i]))
+	return "", newUnexpectedCharacterError(message, i)
+}
 
-	return output.String(), nil
+// JSONRepair is a deprecated alias for [Repair].
+//
+// Deprecated: Use [Repair] instead.
+func JSONRepair(text string) (string, error) {
+	return Repair(text)
 }
 
 // parseValue determines the type of the next value in the input text and parses it accordingly.
-// Returns (success, error) where error is non-nil only for non-repairable issues
+// Returns (success, error) where error is non-nil only for non-repairable issues.
 func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
@@ -107,7 +115,7 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	return processed, nil
 }
 
-// parseWhitespaceAndSkipComments parses whitespace and skips comments.
+// parseWhitespaceAndSkipComments parses whitespace and removes comments from the input.
 func parseWhitespaceAndSkipComments(text *[]rune, i *int, output *strings.Builder, skipNewline bool) bool {
 	start := *i
 	parseWhitespace(text, i, output, skipNewline)
@@ -128,7 +136,7 @@ func parseWhitespaceAndSkipComments(text *[]rune, i *int, output *strings.Builde
 // parseWhitespace parses whitespace characters.
 func parseWhitespace(text *[]rune, i *int, output *strings.Builder, skipNewline bool) bool {
 	start := *i
-	whitespace := strings.Builder{}
+	var whitespace strings.Builder
 
 	isW := isWhitespace
 	if !skipNewline {
@@ -215,7 +223,7 @@ func skipEllipsis(text *[]rune, i *int, output *strings.Builder) bool {
 }
 
 // parseObject parses an object from the input text.
-// Returns (success, error) where error is non-nil for non-repairable issues
+// Returns (success, error) where error is non-nil for non-repairable issues.
 func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	if *i < len(*text) && (*text)[*i] == codeOpeningBrace {
 		output.WriteRune((*text)[*i])
@@ -310,7 +318,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			processedColon := parseCharacter(text, i, output, codeColon)
 			truncatedText := *i >= len(*text)
 			if !processedColon {
-				if *i < len(*text) && isStartOfValue((*text)[*i]) || truncatedText {
+				if (*i < len(*text) && isStartOfValue((*text)[*i])) || truncatedText {
 					// repair missing colon
 					outputStr := insertBeforeLastWhitespace(output.String(), ":")
 					output.Reset()
@@ -351,7 +359,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 }
 
 // parseArray parses an array from the input text.
-// Returns (success, error) where error is non-nil for non-repairable issues
+// Returns (success, error) where error is non-nil for non-repairable issues.
 func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	if *i >= len(*text) {
 		return false, nil
@@ -497,7 +505,7 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 }
 
 // parseString parses a string from the input text, handling various quote and escape scenarios.
-// Returns (success, error) - error is non-nil for non-repairable issues (matches TypeScript version)
+// Returns (success, error) where error is non-nil for non-repairable issues.
 func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter bool, stopAtIndex int) (bool, error) {
 	if *i >= len(*text) {
 		return false, nil
@@ -573,7 +581,11 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				var tempWhitespace strings.Builder
 				parseWhitespaceAndSkipComments(text, &iAfterWhitespace, &tempWhitespace, false)
 
-				if stopAtDelimiter || iAfterWhitespace >= len(*text) || isDelimiter((*text)[iAfterWhitespace]) || isQuote((*text)[iAfterWhitespace]) || isDigit((*text)[iAfterWhitespace]) {
+				if stopAtDelimiter ||
+				iAfterWhitespace >= len(*text) ||
+				isDelimiter((*text)[iAfterWhitespace]) ||
+				isQuote((*text)[iAfterWhitespace]) ||
+				isDigit((*text)[iAfterWhitespace]) {
 					// The quote is followed by the end of the text, a delimiter,
 					// or a next value. So the quote is indeed the end of the string.
 					*i = iAfterWhitespace
@@ -614,8 +626,9 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 			case stopAtDelimiter && isUnquotedStringDelimiter((*text)[*i]):
 				// we're in the mode to stop the string at the first delimiter
 				// because there is an end quote missing
-				if *i > 0 && (*text)[*i-1] == ':' && regexURLStart.MatchString(string((*text)[iBefore+1:min(*i+2, len(*text))])) {
-					for *i < len(*text) && regexURLChar.MatchString(string((*text)[*i])) {
+				if *i > 0 && (*text)[*i-1] == ':' &&
+					regexURLStart.MatchString(string((*text)[iBefore+1:min(*i+2, len(*text))])) {
+					for *i < len(*text) && isURLChar((*text)[*i]) {
 						str.WriteRune((*text)[*i])
 						*i++
 					}
@@ -696,7 +709,8 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 								}
 								chars := string((*text)[*i : *i+endJ])
 								escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
-								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
+								msg := fmt.Sprintf("invalid unicode character \"%s\"", escapedChars)
+								return false, newInvalidUnicodeError(msg, *i)
 							}
 						} else {
 							// Not in file path context or malformed Unicode - throw error
@@ -717,10 +731,12 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							// Add extra quote only for incomplete sequences like "\u26"
 							if hexCount < 4 && endJ == 2+hexCount {
 								// Incomplete sequence like "\u26" needs extra quote
-								return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"\"", escapedChars), *i)
+								msg := fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars)
+							return false, newInvalidUnicodeError(msg, *i)
 							}
 							// Complete but invalid sequence like "\uZ000"
-							return false, newInvalidUnicodeError(fmt.Sprintf("Invalid unicode character \"%s\"", escapedChars), *i)
+							msg := fmt.Sprintf("invalid unicode character \"%s\"", escapedChars)
+								return false, newInvalidUnicodeError(msg, *i)
 						}
 					}
 				} else {
@@ -759,7 +775,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					// Check character validity - matches TypeScript throwInvalidCharacter()
 					if !isValidStringCharacter(char) {
 						// Format control characters as Unicode escape sequences to match TypeScript
-						message := fmt.Sprintf("Invalid character \"\\\\u%04x\"", char)
+						message := fmt.Sprintf("invalid character \"\\\\u%04x\"", char)
 						return false, newInvalidCharacterError(message, *i)
 					}
 					str.WriteRune(char)
@@ -891,9 +907,11 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 
 	if *i > start {
 		num := string((*text)[start:*i])
-		hasInvalidLeadingZero := regexp.MustCompile(`^0\d`).MatchString(num)
+		hasInvalidLeadingZero := leadingZeroRe.MatchString(num)
 		if hasInvalidLeadingZero {
-			fmt.Fprintf(output, `"%s"`, num)
+			output.WriteByte('"')
+			output.WriteString(num)
+			output.WriteByte('"')
 		} else {
 			output.WriteString(num)
 		}
@@ -927,7 +945,7 @@ func parseUnquotedString(text *[]rune, i *int, output *strings.Builder) bool {
 	return parseUnquotedStringWithMode(text, i, output, false)
 }
 
-// parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing
+// parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.
 func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool) bool {
 	start := *i
 
@@ -951,7 +969,9 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 			// repair a JSONP function call like callback({...});
 			*i = j + 1
 
-			// Parse the value inside parentheses, ignore errors for JSONP/MongoDB calls
+			// Errors in JSONP/MongoDB function call arguments are not critical:
+			// the outer function call itself is being stripped, so partial
+			// parsing of the inner value is acceptable.
 			_, _ = parseValue(text, i, output)
 
 			if *i < len(*text) && (*text)[*i] == codeCloseParenthesis {
@@ -1011,7 +1031,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 			output.WriteString("null")
 		} else {
 			// Ensure special quotes are replaced with double quotes
-			repairedSymbol := strings.Builder{}
+			var repairedSymbol strings.Builder
 			for _, char := range symbol {
 				if isSingleQuoteLike(char) || isDoubleQuoteLike(char) {
 					repairedSymbol.WriteRune('"')
@@ -1019,7 +1039,9 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 					repairedSymbol.WriteRune(char)
 				}
 			}
-			fmt.Fprintf(output, `"%s"`, repairedSymbol.String())
+			output.WriteByte('"')
+			output.WriteString(repairedSymbol.String())
+			output.WriteByte('"')
 		}
 
 		// Skip the end quote if encountered
@@ -1032,7 +1054,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	return false
 }
 
-// parseRegex parses a regular expression literal like /pattern/flags.
+// parseRegex parses a regular expression literal like /pattern/flags and wraps it in quotes.
 func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 	if *i < len(*text) && (*text)[*i] == codeSlash {
 		start := *i
@@ -1046,18 +1068,19 @@ func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 			*i++
 		}
 
-		// Process the regex content to handle escape characters properly
+		// json.Marshal properly escapes quotes, backslashes, and other special
+		// characters in the regex content, preventing XSS when repaired JSON is
+		// parsed with eval. See josdejong/jsonrepair#150.
+		// json.Marshal cannot fail for a valid UTF-8 string derived from runes.
 		regexContent := string((*text)[start:*i])
-		// Ensure backslashes are properly escaped in the output JSON string
-		regexContent = strings.ReplaceAll(regexContent, "\\", "\\\\")
-
-		fmt.Fprintf(output, `"%s"`, regexContent)
+		jsonBytes, _ := json.Marshal(regexContent)
+		output.Write(jsonBytes)
 		return true
 	}
 	return false
 }
 
-// parseMarkdownCodeBlock parses and skips Markdown fenced code blocks like ``` or ```json
+// parseMarkdownCodeBlock parses and skips Markdown fenced code blocks like ``` or ```json.
 func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
 	if skipMarkdownCodeBlock(text, i, blocks, output) {
 		if *i < len(*text) && isFunctionNameCharStart((*text)[*i]) {
@@ -1082,7 +1105,7 @@ func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strin
 	return false
 }
 
-// skipMarkdownCodeBlock checks if we're at a Markdown code block marker and skips it
+// skipMarkdownCodeBlock checks if we're at a Markdown code block marker and skips it.
 func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
 	// Parse whitespace before checking for code block markers
 	parseWhitespace(text, i, output, true)
@@ -1092,7 +1115,7 @@ func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *string
 		end := *i + len(blockRunes)
 		if end <= len(*text) {
 			match := true
-			for j := 0; j < len(blockRunes); j++ {
+			for j := range len(blockRunes) {
 				if (*text)[*i+j] != blockRunes[j] {
 					match = false
 					break

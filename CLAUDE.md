@@ -32,7 +32,7 @@ go test -v -race ./...
 
 ### Core Parsing Engine
 
-The library uses a **recursive descent parser with repair capabilities**. The main entry point `JSONRepair()` orchestrates parsing through specialized functions:
+The library uses a **recursive descent parser with repair capabilities**. The main entry point `Repair()` (with `JSONRepair()` as a deprecated alias) orchestrates parsing through specialized functions:
 
 - **parseValue()** - Dispatches to specific type parsers (object, array, string, number, keywords)
 - **parseObject()** - Handles object parsing with automatic key/value repairs

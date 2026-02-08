@@ -421,7 +421,7 @@ func TestShouldStripJSONPNotation(t *testing.T) {
 	assertRepair(t, "  /* foo bar */   callback_123({});  ", "     {}  ")
 	assertRepair(t, "\n/* foo\nbar */\ncallback_123 ({});\n\n", "\n\n{}\n\n")
 	// non-matching
-	assertRepairFailureExact(t, `callback {}`, `Unexpected character "{"`, 9)
+	assertRepairFailureExact(t, `callback {}`, `unexpected character "{"`, 9)
 }
 
 // TestShouldRepairEscapedStringContents tests repairing escaped string contents in JSON strings.
@@ -558,20 +558,13 @@ func TestShouldStripMongoDBDataTypes(t *testing.T) {
 
 // TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString tests not matching MongoDB-like functions in an unquoted string.
 func TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString(t *testing.T) {
-	// Edge case: MongoDB-like function syntax in strings should not be treated as MongoDB expressions
-	// The implementation handles these gracefully by processing them as regular strings
+	result1, err1 := JSONRepair(`["This is C(2)", "This is F(3)]`)
+	require.NoError(t, err1)
+	assert.NotEmpty(t, result1)
 
-	// Test with valid JSON - should not crash
-	result1, _ := JSONRepair(`["This is C(2)", "This is F(3)]`)
-	if result1 == "" {
-		t.Log("Expected behavior: handle gracefully")
-	}
-
-	// Test with invalid JSON - should not crash
-	result2, _ := JSONRepair(`["This is C(2)", This is F(3)]`)
-	if result2 == "" {
-		t.Log("Expected behavior: handle gracefully")
-	}
+	result2, err2 := JSONRepair(`["This is C(2)", This is F(3)]`)
+	require.NoError(t, err2)
+	assert.NotEmpty(t, result2)
 }
 
 // TestShouldReplacePythonConstants tests replacing Python constants (None, True, False) in JSON.
@@ -608,6 +601,15 @@ func TestShouldTurnInvalidNumbersIntoStrings(t *testing.T) {
 func TestShouldRepairRegularExpressions(t *testing.T) {
 	assertRepair(t, `{regex: /standalone-styles.css/}`, `{"regex": "/standalone-styles.css/"}`)
 	assertRepair(t, `{regex: /with escape char \/ [a-z]_/}`, `{"regex": "/with escape char \\/ [a-z]_/"}`)
+	assertRepair(t, `/[a-z]_/`, `"/[a-z]_/"`)
+	// with escape char
+	assertRepair(t, `/\\/`, `"/\\\\/"`)
+}
+
+// TestShouldEscapeQuotesInRepairedRegularExpressions tests XSS prevention in regex repair.
+// See https://github.com/josdejong/jsonrepair/issues/150
+func TestShouldEscapeQuotesInRepairedRegularExpressions(t *testing.T) {
+	assertRepair(t, `/foo"; console.log(-1); "/`, `"/foo\"; console.log(-1); \"/"`)
 }
 
 // TestShouldConcatenateStrings tests concatenating strings in JSON strings.
@@ -739,22 +741,23 @@ func TestShouldStripInvalidMarkdownFencedCodeBlocks(t *testing.T) {
 // Updated to match TypeScript version behavior precisely
 func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
 	// Precise matches with TypeScript version error messages and positions
-	assertRepairFailureExact(t, "", "Unexpected end of json string", 0)
-	assertRepairFailureExact(t, `{"a",`, "Colon expected", 4)
-	assertRepairFailureExact(t, `{:2}`, "Object key expected", 1)
-	assertRepairFailureExact(t, `{"a":2}{}`, `Unexpected character "{"`, 7)
-	assertRepairFailureExact(t, `{"a" ]`, "Colon expected", 5)
-	assertRepairFailureExact(t, `{"a":2}foo`, `Unexpected character "f"`, 7)
-	assertRepairFailureExact(t, `foo [`, `Unexpected character "["`, 4)
-	assertRepairFailureExact(t, `"\u26"`, `Invalid unicode character "\\u26""`, 1)
-	assertRepairFailureExact(t, `"\uZ000"`, `Invalid unicode character "\\uZ000"`, 1)
-	assertRepairFailureExact(t, `"\uZ000`, `Invalid unicode character "\\uZ000"`, 1)
-	assertRepairFailureExact(t, "\"abc\u0000\"", `Invalid character "\\u0000"`, 4)
-	assertRepairFailureExact(t, "\"abc\u001f\"", `Invalid character "\\u001f"`, 4)
+	assertRepairFailureExact(t, "", "unexpected end of json string", 0)
+	assertRepairFailureExact(t, `{"a",`, "colon expected", 4)
+	assertRepairFailureExact(t, `{:2}`, "object key expected", 1)
+	assertRepairFailureExact(t, `{"a":2}{}`, `unexpected character "{"`, 7)
+	assertRepairFailureExact(t, `{"a" ]`, "colon expected", 5)
+	assertRepairFailureExact(t, `{"a":2}foo`, `unexpected character "f"`, 7)
+	assertRepairFailureExact(t, `foo [`, `unexpected character "["`, 4)
+	assertRepairFailureExact(t, `"\u26"`, `invalid unicode character "\\u26""`, 1)
+	assertRepairFailureExact(t, `"\uZ000"`, `invalid unicode character "\\uZ000"`, 1)
+	assertRepairFailureExact(t, `"\uZ000`, `invalid unicode character "\\uZ000"`, 1)
+	assertRepairFailureExact(t, "\"abc\u0000\"", `invalid character "\\u0000"`, 4)
+	assertRepairFailureExact(t, "\"abc\u001f\"", `invalid character "\\u001f"`, 4)
 }
 
-// assertRepairFailureExact checks that the error message and position match exactly
+// assertRepairFailureExact checks that the error message and position match exactly.
 func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expectedPos int) {
+	t.Helper()
 	result, err := JSONRepair(text)
 	require.Error(t, err)
 
@@ -766,12 +769,14 @@ func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expecte
 }
 
 func assertRepairEqual(t *testing.T, text string) {
+	t.Helper()
 	result, err := JSONRepair(text)
 	require.NoError(t, err)
 	assert.Equal(t, text, result)
 }
 
 func assertRepair(t *testing.T, text string, expected string) {
+	t.Helper()
 	result, err := JSONRepair(text)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -934,9 +939,9 @@ func TestJSONEscapeSequencesEdgeCases(t *testing.T) {
 	assertRepairEqual(t, `"\u2605"`)                         // Star symbol
 
 	// Invalid Unicode sequences should cause errors
-	assertRepairFailureExact(t, `"\u"`, `Invalid unicode character "\\u""`, 1)
-	assertRepairFailureExact(t, `"\u12"`, `Invalid unicode character "\\u12""`, 1)
-	assertRepairFailureExact(t, `"\uXYZ"`, `Invalid unicode character "\\uXYZ"`, 1)
+	assertRepairFailureExact(t, `"\u"`, `invalid unicode character "\\u""`, 1)
+	assertRepairFailureExact(t, `"\u12"`, `invalid unicode character "\\u12""`, 1)
+	assertRepairFailureExact(t, `"\uXYZ"`, `invalid unicode character "\\uXYZ"`, 1)
 }
 
 // TestJSONEscapeSequenceCompliance tests compliance with JSON standard
@@ -977,4 +982,24 @@ func BenchmarkJSONRepair(b *testing.B) {
 			}
 		})
 	}
+}
+
+func ExampleRepair() {
+	repaired, err := Repair("{name: 'John'}")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(repaired)
+	// Output: {"name": "John"}
+}
+
+func ExampleRepair_truncated() {
+	repaired, err := Repair(`{"foo":"bar`)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(repaired)
+	// Output: {"foo":"bar"}
 }

@@ -84,9 +84,8 @@ func TestIsLikelyFilePath(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
-			if !isLikelyFilePath(test.input) {
-				t.Errorf("Expected %q to be detected as file path (%s)", test.input, test.desc)
-			}
+			assert.True(t, isLikelyFilePath(test.input),
+				"Expected %q to be detected as file path (%s)", test.input, test.desc)
 		})
 	}
 
@@ -129,9 +128,8 @@ func TestIsLikelyFilePath(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
-			if isLikelyFilePath(test.input) {
-				t.Errorf("Expected %q NOT to be detected as file path (%s)", test.input, test.desc)
-			}
+			assert.False(t, isLikelyFilePath(test.input),
+				"Expected %q NOT to be detected as file path (%s)", test.input, test.desc)
 		})
 	}
 }
@@ -201,9 +199,8 @@ func TestIsURLPath(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
-			if !isURLPath(test.input) {
-				t.Errorf("Expected %q to be detected as URL-style file path (%s)", test.input, test.desc)
-			}
+			assert.True(t, isURLPath(test.input),
+				"Expected %q to be detected as URL-style file path (%s)", test.input, test.desc)
 		})
 	}
 
@@ -224,9 +221,8 @@ func TestIsURLPath(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
-			if isURLPath(test.input) {
-				t.Errorf("Expected %q NOT to be detected as URL-style file path (%s)", test.input, test.desc)
-			}
+			assert.False(t, isURLPath(test.input),
+				"Expected %q NOT to be detected as URL-style file path (%s)", test.input, test.desc)
 		})
 	}
 }
@@ -249,9 +245,8 @@ func TestHasValidPathStructure(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
-			if !hasValidPathStructure(test.input) {
-				t.Errorf("Expected %q to be detected as valid path structure (%s)", test.input, test.desc)
-			}
+			assert.True(t, hasValidPathStructure(test.input),
+				"Expected %q to be detected as valid path structure (%s)", test.input, test.desc)
 		})
 	}
 
@@ -268,9 +263,8 @@ func TestHasValidPathStructure(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
-			if hasValidPathStructure(test.input) {
-				t.Errorf("Expected %q NOT to be detected as valid path structure (%s)", test.input, test.desc)
-			}
+			assert.False(t, hasValidPathStructure(test.input),
+				"Expected %q NOT to be detected as valid path structure (%s)", test.input, test.desc)
 		})
 	}
 }

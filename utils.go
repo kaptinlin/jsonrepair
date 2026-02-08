@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// prevNonWhitespaceIndex finds the previous non-whitespace index in the string.
+// prevNonWhitespaceIndex returns the index of the last non-whitespace rune at or before startIndex.
 func prevNonWhitespaceIndex(text []rune, startIndex int) int {
 	prev := startIndex
 	for prev >= 0 && isWhitespace(text[prev]) {
@@ -27,7 +27,8 @@ func atEndOfNumber(text *[]rune, i *int) bool {
 
 // repairNumberEndingWithNumericSymbol repairs numbers cut off at the end.
 func repairNumberEndingWithNumericSymbol(text *[]rune, start int, i *int, output *strings.Builder) {
-	output.WriteString(string((*text)[start:*i]) + "0")
+	output.WriteString(string((*text)[start:*i]))
+	output.WriteByte('0')
 }
 
 // stripLastOccurrence removes the last occurrence of a specific substring from the input text.
@@ -97,11 +98,13 @@ func isDelimiter(char rune) bool {
 
 // isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(char rune) bool {
-	return regexStartOfValue.MatchString(string(char)) || isQuote(char)
+	return char == '{' || char == '[' ||
+		char == '_' || char == '-' ||
+		(char >= 'a' && char <= 'z') ||
+		(char >= 'A' && char <= 'Z') ||
+		(char >= '0' && char <= '9') ||
+		isQuote(char)
 }
-
-// regexStartOfValue defines the regular expression for the start of a JSON value.
-var regexStartOfValue = regexp.MustCompile(`^[{[\w-]$`)
 
 // isControlCharacter checks if a rune is a control character.
 func isControlCharacter(code rune) bool {
@@ -189,7 +192,7 @@ func endsWithCommaOrNewline(text string) bool {
 		if len(trimmed) > 0 && trimmed[len(trimmed)-1] == '"' {
 			// The text ends with a quote, so any comma before it is likely a JSON separator
 			// Look for the pattern: "..." , or "...",
-			return regexp.MustCompile(`"[ \t\r]*[,\n][ \t\r]*$`).MatchString(text)
+			return endsWithCommaOrNewlineRe.MatchString(text)
 		}
 		return true
 	}
@@ -223,23 +226,39 @@ func isWhitespaceExceptNewline(code rune) bool {
 	return code == codeSpace || code == codeTab || code == codeReturn
 }
 
-// URL-related regular expressions and functions
-var regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
-var regexURLChar = regexp.MustCompile(`^[A-Za-z0-9\-._~:/?#@!$&'()*+;=]$`)
+// URL-related regular expressions.
+var (
+	regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
+)
 
 // isURLChar checks if a rune is a valid URL character.
 func isURLChar(code rune) bool {
-	return regexURLChar.MatchString(string(code))
+	switch {
+	case code >= 'A' && code <= 'Z':
+		return true
+	case code >= 'a' && code <= 'z':
+		return true
+	case code >= '0' && code <= '9':
+		return true
+	default:
+		switch code {
+		case '-', '.', '_', '~', ':', '/', '?', '#', '@', '!', '$', '&', '\'', '(', ')', '*', '+', ';', '=':
+			return true
+		}
+		return false
+	}
 }
 
-// Regular expression cache for improved performance
+// Regular expression cache for improved performance.
 var (
-	driveLetterRe   = regexp.MustCompile(`^[A-Za-z]:\\`)
-	containsDriveRe = regexp.MustCompile(`[A-Za-z]:\\`)
-	base64Re        = regexp.MustCompile(`^[A-Za-z0-9+/=]{20,}$`)
-	fileExtensionRe = regexp.MustCompile(`(?i)\.[a-z0-9]{2,5}(\?|$|\\|"|/)`)
-	unicodeEscapeRe = regexp.MustCompile(`\\u[0-9a-fA-F]{4}`)
-	urlEncodingRe   = regexp.MustCompile(`%[0-9a-fA-F]{2}`)
+	leadingZeroRe            = regexp.MustCompile(`^0\d`)
+	endsWithCommaOrNewlineRe = regexp.MustCompile(`"[ \t\r]*[,\n][ \t\r]*$`)
+	driveLetterRe            = regexp.MustCompile(`^[A-Za-z]:\\`)
+	containsDriveRe          = regexp.MustCompile(`[A-Za-z]:\\`)
+	base64Re                 = regexp.MustCompile(`^[A-Za-z0-9+/=]{20,}$`)
+	fileExtensionRe          = regexp.MustCompile(`(?i)\.[a-z0-9]{2,5}(\?|$|\\|"|/)`)
+	unicodeEscapeRe          = regexp.MustCompile(`\\u[0-9a-fA-F]{4}`)
+	urlEncodingRe            = regexp.MustCompile(`%[0-9a-fA-F]{2}`)
 )
 
 // ================================
@@ -740,7 +759,7 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 			case 'u':
 				// Unicode escape
 				if i+5 < len(*text) {
-					for j := 0; j < 6; j++ {
+					for j := range 6 {
 						contentBuilder.WriteRune((*text)[i+j])
 					}
 					i += 6
