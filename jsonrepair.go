@@ -4,9 +4,10 @@
 package jsonrepair
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/go-json-experiment/json"
 )
 
 // Repair attempts to repair the given JSON string and returns the repaired version.
