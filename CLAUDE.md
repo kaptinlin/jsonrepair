@@ -99,7 +99,7 @@ Test coverage includes:
 
 ### golangci-lint Configuration
 
-This package uses golangci-lint v2.4.0 (managed via `.golangci.version`). The Makefile automatically installs the correct version in `./bin/`.
+This package uses golangci-lint v2.9.0 (managed via `.golangci.version`). The Makefile automatically installs the correct version in `./bin/`.
 
 Enabled linters include:
 - Core: errcheck, govet, staticcheck, unused
@@ -127,7 +127,7 @@ Enabled linters include:
 
 ## Go Version & Dependencies
 
-- **Go 1.25** - Uses modern Go features
+- **Go 1.26** - Uses modern Go features
 - **github.com/stretchr/testify v1.11.1** - Testing framework
 
 ## Performance Characteristics
