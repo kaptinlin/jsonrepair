@@ -583,10 +583,10 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 				parseWhitespaceAndSkipComments(text, &iAfterWhitespace, &tempWhitespace, false)
 
 				if stopAtDelimiter ||
-				iAfterWhitespace >= len(*text) ||
-				isDelimiter((*text)[iAfterWhitespace]) ||
-				isQuote((*text)[iAfterWhitespace]) ||
-				isDigit((*text)[iAfterWhitespace]) {
+					iAfterWhitespace >= len(*text) ||
+					isDelimiter((*text)[iAfterWhitespace]) ||
+					isQuote((*text)[iAfterWhitespace]) ||
+					isDigit((*text)[iAfterWhitespace]) {
 					// The quote is followed by the end of the text, a delimiter,
 					// or a next value. So the quote is indeed the end of the string.
 					*i = iAfterWhitespace
@@ -733,11 +733,11 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							if hexCount < 4 && endJ == 2+hexCount {
 								// Incomplete sequence like "\u26" needs extra quote
 								msg := fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars)
-							return false, newInvalidUnicodeError(msg, *i)
+								return false, newInvalidUnicodeError(msg, *i)
 							}
 							// Complete but invalid sequence like "\uZ000"
 							msg := fmt.Sprintf("invalid unicode character \"%s\"", escapedChars)
-								return false, newInvalidUnicodeError(msg, *i)
+							return false, newInvalidUnicodeError(msg, *i)
 						}
 					}
 				} else {
