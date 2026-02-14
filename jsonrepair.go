@@ -12,11 +12,12 @@ import (
 
 // Repair attempts to repair the given JSON string and returns the repaired version.
 // It handles common issues such as missing quotes, trailing commas, comments,
-// single quotes, and truncated JSON. If the input is empty, it returns an error.
-// If the JSON contains non-repairable issues, a structured [*Error] is returned
-// with the position and description of the problem.
+// single quotes, and truncated JSON.
+//
+// Returns an error if:
+//   - The input is empty
+//   - The JSON contains non-repairable issues (structured [*Error] with position)
 func Repair(text string) (string, error) {
-	// Check for empty input - matches TypeScript version behavior
 	if len(text) == 0 {
 		return "", newUnexpectedEndError(0)
 	}
@@ -57,13 +58,12 @@ func Repair(text string) (string, error) {
 		output.WriteString(outputStr)
 	}
 
-	// repair redundant end quotes
+	// Repair redundant end quotes
 	for i < len(runes) && (runes[i] == codeClosingBrace || runes[i] == codeClosingBracket) {
 		i++
 		parseWhitespaceAndSkipComments(&runes, &i, &output, true)
 	}
 
-	// Skip any remaining whitespace before checking for unexpected characters
 	parseWhitespaceAndSkipComments(&runes, &i, &output, true)
 
 	if i >= len(runes) {
@@ -81,56 +81,55 @@ func JSONRepair(text string) (string, error) {
 	return Repair(text)
 }
 
-// parseValue determines the type of the next value in the input text and parses it accordingly.
+// parseValue determines the type of the next value and parses it accordingly.
 // Returns (success, error) where error is non-nil only for non-repairable issues.
 func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
-	// Try parseObject first and handle potential errors
-	if processedObj, err := parseObject(text, i, output); err != nil {
+	processedObj, err := parseObject(text, i, output)
+	if err != nil {
 		return false, err
-	} else if processedObj {
+	}
+	if processedObj {
 		parseWhitespaceAndSkipComments(text, i, output, true)
 		return true, nil
 	}
 
-	// Try other parsers with original logic
 	processed, err := parseArray(text, i, output)
 	if err != nil {
 		return false, err
 	}
-	if !processed {
-		// Try parseString and handle errors (matches TypeScript version)
-		stringProcessed, err := parseString(text, i, output, false, -1)
-		if err != nil {
-			return false, err
-		}
-		processed = stringProcessed ||
-			parseNumber(text, i, output) ||
-			parseKeywords(text, i, output) ||
-			parseUnquotedString(text, i, output) ||
-			parseRegex(text, i, output)
+	if processed {
+		parseWhitespaceAndSkipComments(text, i, output, true)
+		return true, nil
 	}
-	parseWhitespaceAndSkipComments(text, i, output, true)
 
+	stringProcessed, err := parseString(text, i, output, false, -1)
+	if err != nil {
+		return false, err
+	}
+	processed = stringProcessed ||
+		parseNumber(text, i, output) ||
+		parseKeywords(text, i, output) ||
+		parseUnquotedString(text, i, output) ||
+		parseRegex(text, i, output)
+
+	parseWhitespaceAndSkipComments(text, i, output, true)
 	return processed, nil
 }
 
-// parseWhitespaceAndSkipComments parses whitespace and removes comments from the input.
+// parseWhitespaceAndSkipComments parses whitespace and removes comments.
 func parseWhitespaceAndSkipComments(text *[]rune, i *int, output *strings.Builder, skipNewline bool) bool {
 	start := *i
 	parseWhitespace(text, i, output, skipNewline)
 	for {
 		changed := parseComment(text, i)
 		if changed {
-			changed = parseWhitespace(text, i, output, skipNewline)
-		}
-
-		if !changed {
+			parseWhitespace(text, i, output, skipNewline)
+		} else {
 			break
 		}
 	}
-
 	return *i > start
 }
 
@@ -162,28 +161,33 @@ func parseWhitespace(text *[]rune, i *int, output *strings.Builder, skipNewline 
 
 // parseComment parses both single-line (//) and multi-line (/* */) comments.
 func parseComment(text *[]rune, i *int) bool {
-	if *i+1 < len(*text) {
-		if (*text)[*i] == codeSlash && (*text)[*i+1] == codeAsterisk { // multi-line comment
-			// repair block comment by skipping it
-			for *i < len(*text) && !atEndOfBlockComment(text, i) {
-				*i++
-			}
-			if *i+2 <= len(*text) {
-				*i += 2 // move past the end of the block comment
-			}
-			return true
-		} else if (*text)[*i] == codeSlash && (*text)[*i+1] == codeSlash { // single-line comment
-			// repair line comment by skipping it
-			for *i < len(*text) && (*text)[*i] != codeNewline {
-				*i++
-			}
-			return true
-		}
+	if *i+1 >= len(*text) {
+		return false
 	}
+
+	if (*text)[*i] == codeSlash && (*text)[*i+1] == codeAsterisk {
+		// Multi-line comment: skip until */
+		for *i < len(*text) && !atEndOfBlockComment(text, i) {
+			*i++
+		}
+		if *i+2 <= len(*text) {
+			*i += 2
+		}
+		return true
+	}
+
+	if (*text)[*i] == codeSlash && (*text)[*i+1] == codeSlash {
+		// Single-line comment: skip until newline
+		for *i < len(*text) && (*text)[*i] != codeNewline {
+			*i++
+		}
+		return true
+	}
+
 	return false
 }
 
-// parseCharacter parses a specific character and adds it to the output if it matches the expected code.
+// parseCharacter parses a specific character and adds it to output if it matches.
 func parseCharacter(text *[]rune, i *int, output *strings.Builder, code rune) bool {
 	if *i < len(*text) && (*text)[*i] == code {
 		output.WriteRune((*text)[*i])
@@ -193,7 +197,7 @@ func parseCharacter(text *[]rune, i *int, output *strings.Builder, code rune) bo
 	return false
 }
 
-// skipCharacter skips a specific character in the input text if it matches the expected code.
+// skipCharacter skips a specific character if it matches.
 func skipCharacter(text *[]rune, i *int, code rune) bool {
 	if *i < len(*text) && (*text)[*i] == code {
 		*i++
@@ -202,7 +206,7 @@ func skipCharacter(text *[]rune, i *int, code rune) bool {
 	return false
 }
 
-// skipEscapeCharacter skips an escape character in the input text.
+// skipEscapeCharacter skips a backslash escape character.
 func skipEscapeCharacter(text *[]rune, i *int) bool {
 	return skipCharacter(text, i, codeBackslash)
 }
@@ -223,7 +227,7 @@ func skipEllipsis(text *[]rune, i *int, output *strings.Builder) bool {
 	return false
 }
 
-// parseObject parses an object from the input text.
+// parseObject parses a JSON object.
 // Returns (success, error) where error is non-nil for non-repairable issues.
 func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	if *i < len(*text) && (*text)[*i] == codeOpeningBrace {
@@ -231,10 +235,9 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 		*i++
 		parseWhitespaceAndSkipComments(text, i, output, true)
 
-		// repair: skip leading comma like in {, message: "hi"}
-		if skipCharacter(text, i, codeComma) {
-			parseWhitespaceAndSkipComments(text, i, output, true)
-		}
+		// Repair: skip leading comma like in {, message: "hi"}
+		skipCharacter(text, i, codeComma)
+		parseWhitespaceAndSkipComments(text, i, output, true)
 
 		initial := true
 		for *i < len(*text) && (*text)[*i] != codeClosingBrace {

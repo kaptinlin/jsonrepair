@@ -7,12 +7,14 @@ import (
 )
 
 // prevNonWhitespaceIndex returns the index of the last non-whitespace rune at or before startIndex.
+// Returns -1 if no non-whitespace character is found.
 func prevNonWhitespaceIndex(text []rune, startIndex int) int {
-	prev := startIndex
-	for prev >= 0 && isWhitespace(text[prev]) {
-		prev--
+	for i := startIndex; i >= 0; i-- {
+		if !isWhitespace(text[i]) {
+			return i
+		}
 	}
-	return prev
+	return -1
 }
 
 // atEndOfBlockComment checks if the current position is at the end of a block comment.
@@ -32,35 +34,32 @@ func repairNumberEndingWithNumericSymbol(text *[]rune, start int, i *int, output
 }
 
 // stripLastOccurrence removes the last occurrence of a specific substring from the input text.
+// If stripRemainingText is true, removes everything from the match onwards.
+// Otherwise, removes only the matched substring.
 func stripLastOccurrence(text, textToStrip string, stripRemainingText bool) string {
 	index := strings.LastIndex(text, textToStrip)
-	if index != -1 {
-		if stripRemainingText {
-			return text[:index]
-		}
-		return text[:index] + text[index+len(textToStrip):]
+	if index == -1 {
+		return text
 	}
-	return text
+	if stripRemainingText {
+		return text[:index]
+	}
+	return text[:index] + text[index+len(textToStrip):]
 }
 
-// insertBeforeLastWhitespace inserts a substring before the last whitespace in the input text.
-// For comma insertion, we want to insert after the value but before any trailing whitespace.
+// insertBeforeLastWhitespace inserts a substring before trailing whitespace.
+// If no trailing whitespace exists, appends the text to the end.
 func insertBeforeLastWhitespace(s, textToInsert string) string {
-	// If the last character is not whitespace, simply append the text to insert.
 	if len(s) == 0 || !isWhitespace(rune(s[len(s)-1])) {
 		return s + textToInsert
 	}
 
-	// Walk backwards over all trailing whitespace characters (space, tab, cr, lf).
+	// Find the last non-whitespace character
 	index := len(s) - 1
-	for index >= 0 {
-		if !isWhitespace(rune(s[index])) {
-			break
-		}
+	for index >= 0 && isWhitespace(rune(s[index])) {
 		index--
 	}
 
-	// index now points at the last non-whitespace character.
 	return s[:index+1] + textToInsert + s[index+1:]
 }
 
@@ -81,8 +80,8 @@ func isDigit(code rune) bool {
 	return code >= codeZero && code <= codeNine
 }
 
-// isValidStringCharacter checks if a character is valid inside a JSON string
-// Matches TypeScript version: char >= '\u0020'
+// isValidStringCharacter checks if a character is valid inside a JSON string.
+// Valid characters are those >= U+0020 (space).
 func isValidStringCharacter(char rune) bool {
 	return char >= 0x0020
 }
@@ -163,18 +162,17 @@ func isSingleQuote(code rune) bool {
 	return code == codeQuote
 }
 
-// endsWithCommaOrNewline checks if the string ends with a comma or newline character and optional whitespace.
-// This function should only match commas that are outside of quoted strings.
+// endsWithCommaOrNewline checks if the string ends with a comma or newline.
+// Only matches commas outside of quoted strings.
 func endsWithCommaOrNewline(text string) bool {
 	if len(text) == 0 {
 		return false
 	}
 
-	// Find the last non-whitespace character
 	runes := []rune(text)
 	i := len(runes) - 1
 
-	// Skip trailing whitespace
+	// Skip trailing whitespace (excluding newlines)
 	for i >= 0 && (runes[i] == ' ' || runes[i] == '\t' || runes[i] == '\r') {
 		i--
 	}
@@ -183,21 +181,17 @@ func endsWithCommaOrNewline(text string) bool {
 		return false
 	}
 
-	// Check if the last non-whitespace character is a comma or newline
-	// But only if it's not inside a quoted string
-	if runes[i] == ',' || runes[i] == '\n' {
-		// Simple check: if the text ends with a quoted string, the comma is likely inside the string
-		// A more robust approach would be to parse the JSON structure, but for now we use a heuristic
-		trimmed := strings.TrimSpace(text)
-		if len(trimmed) > 0 && trimmed[len(trimmed)-1] == '"' {
-			// The text ends with a quote, so any comma before it is likely a JSON separator
-			// Look for the pattern: "..." , or "...",
-			return endsWithCommaOrNewlineRe.MatchString(text)
-		}
-		return true
+	if runes[i] != ',' && runes[i] != '\n' {
+		return false
 	}
 
-	return false
+	// If text ends with a quote, use regex to verify comma is outside string
+	trimmed := strings.TrimSpace(text)
+	if len(trimmed) > 0 && trimmed[len(trimmed)-1] == '"' {
+		return endsWithCommaOrNewlineRe.MatchString(text)
+	}
+
+	return true
 }
 
 // isFunctionNameCharStart checks if a rune is a valid function name start character.
@@ -315,7 +309,7 @@ var commonFileExtensions = []string{
 // EARLY EXCLUSION FILTERS
 // ================================
 
-// hasExcessiveEscapeSequences checks if content has too many escape sequences to be a valid file path
+// hasExcessiveEscapeSequences checks if content has too many escape sequences to be a valid file path.
 func hasExcessiveEscapeSequences(content string) bool {
 	if len(content) < 3 {
 		return false
@@ -349,7 +343,7 @@ func hasExcessiveEscapeSequences(content string) bool {
 	return false
 }
 
-// isLikelyTextBlob identifies content that has text-like characteristics
+// isLikelyTextBlob identifies content that has text-like characteristics.
 func isLikelyTextBlob(content string) bool {
 	if len(content) < 3 {
 		return false
@@ -395,7 +389,7 @@ func isLikelyTextBlob(content string) bool {
 	return false
 }
 
-// isBase64String checks if content appears to be base64 encoded
+// isBase64String checks if content appears to be base64 encoded.
 func isBase64String(content string) bool {
 	if len(content) < 20 {
 		return false
@@ -403,7 +397,7 @@ func isBase64String(content string) bool {
 	return base64Re.MatchString(content)
 }
 
-// hasURLEncoding checks if content contains URL encoding patterns
+// hasURLEncoding checks if content contains URL encoding patterns.
 func hasURLEncoding(content string) bool {
 	return urlEncodingRe.MatchString(content)
 }
@@ -412,12 +406,12 @@ func hasURLEncoding(content string) bool {
 // PATH FORMAT DETECTION
 // ================================
 
-// isWindowsAbsolutePath checks for Windows absolute paths (drive letter format)
+// isWindowsAbsolutePath checks for Windows absolute paths (drive letter format).
 func isWindowsAbsolutePath(content string) bool {
 	return driveLetterRe.MatchString(content) || containsDriveRe.MatchString(content)
 }
 
-// isUNCPath checks for UNC (Universal Naming Convention) paths
+// isUNCPath checks for UNC (Universal Naming Convention) paths.
 func isUNCPath(content string) bool {
 	if !strings.HasPrefix(content, `\\`) || strings.HasPrefix(content, `\\\\`) {
 		return false
@@ -428,12 +422,12 @@ func isUNCPath(content string) bool {
 	return len(parts) >= 4 && len(parts[2]) > 0 && len(parts[3]) > 0
 }
 
-// isUnixAbsolutePath checks for Unix absolute paths
+// isUnixAbsolutePath checks for Unix absolute paths.
 func isUnixAbsolutePath(content string) bool {
 	return strings.HasPrefix(content, "/") || strings.HasPrefix(content, "~/")
 }
 
-// isURLPath checks for URL-style file paths
+// isURLPath checks for URL-style file paths.
 func isURLPath(content string) bool {
 	lowerContent := strings.ToLower(content)
 
@@ -470,12 +464,12 @@ func isURLPath(content string) bool {
 // STRUCTURAL VALIDATION
 // ================================
 
-// containsPathSeparator checks if content contains valid path separators
+// containsPathSeparator checks if content contains valid path separators.
 func containsPathSeparator(content string) bool {
 	return strings.Contains(content, "/") || strings.Contains(content, "\\")
 }
 
-// countValidPathSegments counts meaningful path segments
+// countValidPathSegments counts meaningful path segments.
 func countValidPathSegments(content string, separator string) int {
 	parts := strings.Split(content, separator)
 	meaningfulParts := 0
@@ -490,7 +484,7 @@ func countValidPathSegments(content string, separator string) int {
 	return meaningfulParts
 }
 
-// hasFileExtension checks if content has a valid file extension
+// hasFileExtension checks if content has a valid file extension.
 func hasFileExtension(content string) bool {
 	// Use Go's filepath.Ext for standard detection
 	ext := filepath.Ext(content)
@@ -502,7 +496,7 @@ func hasFileExtension(content string) bool {
 	return fileExtensionRe.MatchString(content)
 }
 
-// hasValidPathStructure validates the overall path structure
+// hasValidPathStructure validates the overall path structure.
 func hasValidPathStructure(pathStr string) bool {
 	if len(pathStr) < 2 {
 		return false
@@ -572,7 +566,7 @@ func hasValidPathStructure(pathStr string) bool {
 	return false
 }
 
-// isValidPathCharacter checks if a character is valid in file paths
+// isValidPathCharacter checks if a character is valid in file paths.
 func isValidPathCharacter(r rune) bool {
 	return (r >= 'a' && r <= 'z') ||
 		(r >= 'A' && r <= 'Z') ||
@@ -581,7 +575,7 @@ func isValidPathCharacter(r rune) bool {
 		r == '-' || r == '_' || r == ' ' || r == '~'
 }
 
-// hasReasonableCharacterDistribution checks character distribution for path-like content
+// hasReasonableCharacterDistribution checks character distribution for path-like content.
 func hasReasonableCharacterDistribution(content string) bool {
 	if len(content) == 0 {
 		return false
@@ -670,7 +664,7 @@ func matchesAbsolutePathFormat(content string) bool {
 		isUnixAbsolutePath(content)
 }
 
-// isLikelyFilePath determines if a string content looks like a file path
+// isLikelyFilePath determines if a string looks like a file path
 // using a structured, layer-based approach.
 func isLikelyFilePath(content string) bool {
 	if len(content) < 2 {
@@ -721,8 +715,8 @@ func isLikelyFilePath(content string) bool {
 	return hasValidPathStructure(content)
 }
 
-// analyzePotentialFilePath analyzes a portion of text to determine if it contains file paths
-// This function has been optimized for structural detection
+// analyzePotentialFilePath analyzes a portion of text to determine if it contains file paths.
+// This function has been optimized for structural detection.
 func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 	if startPos >= len(*text) || (*text)[startPos] != '"' {
 		return false
