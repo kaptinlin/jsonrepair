@@ -81,8 +81,8 @@ func JSONRepair(text string) (string, error) {
 	return Repair(text)
 }
 
-// parseValue determines the type of the next value and parses it accordingly.
-// Returns (success, error) where error is non-nil only for non-repairable issues.
+// parseValue determines the type of the next value and parses it.
+// Returns (success, error) where error is non-nil for non-repairable issues.
 func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
@@ -508,7 +508,7 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 	output.WriteString(outputStr)
 }
 
-// parseString parses a string from the input text, handling various quote and escape scenarios.
+// parseString parses a string, handling various quote and escape scenarios.
 // Returns (success, error) where error is non-nil for non-repairable issues.
 func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter bool, stopAtIndex int) (bool, error) {
 	if *i >= len(*text) {
@@ -797,7 +797,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 	return false, nil
 }
 
-// parseConcatenatedString parses and repairs concatenated strings (e.g., "hello" + "world").
+// parseConcatenatedString parses concatenated strings (e.g., "hello" + "world").
 func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool {
 	processed := false
 
@@ -848,7 +848,7 @@ func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool
 	return processed
 }
 
-// parseNumber parses a number from the input text, handling various numeric formats.
+// parseNumber parses a number, handling various numeric formats.
 func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 	start := *i
 	if *i < len(*text) && (*text)[*i] == codeMinus {
@@ -924,7 +924,7 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 	return false
 }
 
-// parseKeywords parses and repairs JSON keywords (true, false, null) and Python keywords (True, False, None).
+// parseKeywords parses JSON keywords (true, false, null) and Python keywords (True, False, None).
 func parseKeywords(text *[]rune, i *int, output *strings.Builder) bool {
 	return parseKeyword(text, i, output, "true", "true") ||
 		parseKeyword(text, i, output, "false", "false") ||
@@ -944,7 +944,7 @@ func parseKeyword(text *[]rune, i *int, output *strings.Builder, name, value str
 	return false
 }
 
-// parseUnquotedString parses and repairs unquoted strings, MongoDB function calls, and JSONP function calls.
+// parseUnquotedString parses unquoted strings, MongoDB function calls, and JSONP function calls.
 func parseUnquotedString(text *[]rune, i *int, output *strings.Builder) bool {
 	return parseUnquotedStringWithMode(text, i, output, false)
 }
@@ -1058,7 +1058,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	return false
 }
 
-// parseRegex parses a regular expression literal like /pattern/flags and wraps it in quotes.
+// parseRegex parses a regex literal like /pattern/flags and wraps it in quotes.
 func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 	if *i < len(*text) && (*text)[*i] == codeSlash {
 		start := *i

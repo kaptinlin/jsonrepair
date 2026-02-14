@@ -15,12 +15,11 @@ var (
 	ErrInvalidUnicode      = errors.New("invalid unicode character")
 )
 
-// Error represents a structured JSON repair error.
-// It provides the error message, position, and optional underlying error.
+// Error represents a structured JSON repair error with position information.
 type Error struct {
 	Message  string
 	Position int
-	Err      error // optional underlying error
+	Err      error // underlying error for errors.Is/As support
 }
 
 // Error implements the error interface.
@@ -31,7 +30,7 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("%s at position %d", e.Message, e.Position)
 }
 
-// Unwrap allows Error to support errors.Is / errors.As.
+// Unwrap returns the underlying error for errors.Is/As support.
 func (e *Error) Unwrap() error {
 	return e.Err
 }

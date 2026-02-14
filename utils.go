@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-// prevNonWhitespaceIndex returns the index of the last non-whitespace rune at or before startIndex.
-// Returns -1 if no non-whitespace character is found.
-func prevNonWhitespaceIndex(text []rune, startIndex int) int {
-	for i := startIndex; i >= 0; i-- {
+// prevNonWhitespaceIndex returns the index of the last non-whitespace rune
+// at or before start. Returns -1 if not found.
+func prevNonWhitespaceIndex(text []rune, start int) int {
+	for i := start; i >= 0; i-- {
 		if !isWhitespace(text[i]) {
 			return i
 		}
@@ -33,34 +33,32 @@ func repairNumberEndingWithNumericSymbol(text *[]rune, start int, i *int, output
 	output.WriteByte('0')
 }
 
-// stripLastOccurrence removes the last occurrence of a specific substring from the input text.
-// If stripRemainingText is true, removes everything from the match onwards.
-// Otherwise, removes only the matched substring.
-func stripLastOccurrence(text, textToStrip string, stripRemainingText bool) string {
-	index := strings.LastIndex(text, textToStrip)
+// stripLastOccurrence removes the last occurrence of substr from text.
+// If stripRemaining is true, removes everything from the match onwards.
+func stripLastOccurrence(text, substr string, stripRemaining bool) string {
+	index := strings.LastIndex(text, substr)
 	if index == -1 {
 		return text
 	}
-	if stripRemainingText {
+	if stripRemaining {
 		return text[:index]
 	}
-	return text[:index] + text[index+len(textToStrip):]
+	return text[:index] + text[index+len(substr):]
 }
 
-// insertBeforeLastWhitespace inserts a substring before trailing whitespace.
-// If no trailing whitespace exists, appends the text to the end.
-func insertBeforeLastWhitespace(s, textToInsert string) string {
+// insertBeforeLastWhitespace inserts text before trailing whitespace.
+// If no trailing whitespace exists, appends to the end.
+func insertBeforeLastWhitespace(s, text string) string {
 	if len(s) == 0 || !isWhitespace(rune(s[len(s)-1])) {
-		return s + textToInsert
+		return s + text
 	}
 
-	// Find the last non-whitespace character
 	index := len(s) - 1
 	for index >= 0 && isWhitespace(rune(s[index])) {
 		index--
 	}
 
-	return s[:index+1] + textToInsert + s[index+1:]
+	return s[:index+1] + text + s[index+1:]
 }
 
 // removeAtIndex removes a substring from the input text at a specific index.
@@ -69,26 +67,26 @@ func removeAtIndex(text string, start, count int) string {
 }
 
 // isHex checks if a rune is a hexadecimal digit.
-func isHex(code rune) bool {
-	return (code >= codeZero && code <= codeNine) ||
-		(code >= codeUppercaseA && code <= codeUppercaseF) ||
-		(code >= codeLowercaseA && code <= codeLowercaseF)
+func isHex(c rune) bool {
+	return (c >= codeZero && c <= codeNine) ||
+		(c >= codeUppercaseA && c <= codeUppercaseF) ||
+		(c >= codeLowercaseA && c <= codeLowercaseF)
 }
 
 // isDigit checks if a rune is a digit.
-func isDigit(code rune) bool {
-	return code >= codeZero && code <= codeNine
+func isDigit(c rune) bool {
+	return c >= codeZero && c <= codeNine
 }
 
 // isValidStringCharacter checks if a character is valid inside a JSON string.
-// Valid characters are those >= U+0020 (space).
-func isValidStringCharacter(char rune) bool {
-	return char >= 0x0020
+// Valid characters are >= U+0020 (space).
+func isValidStringCharacter(c rune) bool {
+	return c >= 0x0020
 }
 
 // isDelimiter checks if a character is a delimiter.
-func isDelimiter(char rune) bool {
-	switch char {
+func isDelimiter(c rune) bool {
+	switch c {
 	case ',', ':', '[', ']', '/', '{', '}', '(', ')', '\n', '+':
 		return true
 	}
@@ -96,70 +94,70 @@ func isDelimiter(char rune) bool {
 }
 
 // isStartOfValue checks if a rune is the start of a JSON value.
-func isStartOfValue(char rune) bool {
-	return char == '{' || char == '[' ||
-		char == '_' || char == '-' ||
-		(char >= 'a' && char <= 'z') ||
-		(char >= 'A' && char <= 'Z') ||
-		(char >= '0' && char <= '9') ||
-		isQuote(char)
+func isStartOfValue(c rune) bool {
+	return c == '{' || c == '[' ||
+		c == '_' || c == '-' ||
+		(c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') ||
+		isQuote(c)
 }
 
 // isControlCharacter checks if a rune is a control character.
-func isControlCharacter(code rune) bool {
-	return code == codeNewline ||
-		code == codeReturn ||
-		code == codeTab ||
-		code == codeBackspace ||
-		code == codeFormFeed
+func isControlCharacter(c rune) bool {
+	return c == codeNewline ||
+		c == codeReturn ||
+		c == codeTab ||
+		c == codeBackspace ||
+		c == codeFormFeed
 }
 
 // isWhitespace checks if a rune is a whitespace character.
-func isWhitespace(code rune) bool {
-	return code == codeSpace ||
-		code == codeNewline ||
-		code == codeTab ||
-		code == codeReturn
+func isWhitespace(c rune) bool {
+	return c == codeSpace ||
+		c == codeNewline ||
+		c == codeTab ||
+		c == codeReturn
 }
 
 // isSpecialWhitespace checks if a rune is a special whitespace character.
-func isSpecialWhitespace(code rune) bool {
-	return code == codeNonBreakingSpace ||
-		(code >= codeEnQuad && code <= codeHairSpace) ||
-		code == codeNarrowNoBreakSpace ||
-		code == codeMediumMathematicalSpace ||
-		code == codeIdeographicSpace
+func isSpecialWhitespace(c rune) bool {
+	return c == codeNonBreakingSpace ||
+		(c >= codeEnQuad && c <= codeHairSpace) ||
+		c == codeNarrowNoBreakSpace ||
+		c == codeMediumMathematicalSpace ||
+		c == codeIdeographicSpace
 }
 
 // isQuote checks if a rune is a quote character.
-func isQuote(code rune) bool {
-	return isDoubleQuoteLike(code) || isSingleQuoteLike(code)
+func isQuote(c rune) bool {
+	return isDoubleQuoteLike(c) || isSingleQuoteLike(c)
 }
 
-// isDoubleQuoteLike checks if a rune is a double quote or a variant of double quote.
-func isDoubleQuoteLike(code rune) bool {
-	return code == codeDoubleQuote ||
-		code == codeDoubleQuoteLeft ||
-		code == codeDoubleQuoteRight
+// isDoubleQuoteLike checks if a rune is a double quote or variant.
+func isDoubleQuoteLike(c rune) bool {
+	return c == codeDoubleQuote ||
+		c == codeDoubleQuoteLeft ||
+		c == codeDoubleQuoteRight
 }
 
 // isDoubleQuote checks if a rune is a double quote.
-func isDoubleQuote(code rune) bool {
-	return code == codeDoubleQuote
+func isDoubleQuote(c rune) bool {
+	return c == codeDoubleQuote
 }
 
-// isSingleQuoteLike checks if a rune is a single quote or a variant of single quote.
-func isSingleQuoteLike(code rune) bool {
-	return code == codeQuote ||
-		code == codeQuoteLeft ||
-		code == codeQuoteRight ||
-		code == codeGraveAccent ||
-		code == codeAcuteAccent
+// isSingleQuoteLike checks if a rune is a single quote or variant.
+func isSingleQuoteLike(c rune) bool {
+	return c == codeQuote ||
+		c == codeQuoteLeft ||
+		c == codeQuoteRight ||
+		c == codeGraveAccent ||
+		c == codeAcuteAccent
 }
 
 // isSingleQuote checks if a rune is a single quote.
-func isSingleQuote(code rune) bool {
-	return code == codeQuote
+func isSingleQuote(c rune) bool {
+	return c == codeQuote
 }
 
 // endsWithCommaOrNewline checks if the string ends with a comma or newline.
@@ -195,29 +193,29 @@ func endsWithCommaOrNewline(text string) bool {
 }
 
 // isFunctionNameCharStart checks if a rune is a valid function name start character.
-func isFunctionNameCharStart(code rune) bool {
-	return (code >= 'a' && code <= 'z') || (code >= 'A' && code <= 'Z') || code == '_' || code == '$'
+func isFunctionNameCharStart(c rune) bool {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$'
 }
 
 // isFunctionNameChar checks if a rune is a valid function name character.
-func isFunctionNameChar(code rune) bool {
-	return isFunctionNameCharStart(code) || isDigit(code)
+func isFunctionNameChar(c rune) bool {
+	return isFunctionNameCharStart(c) || isDigit(c)
 }
 
 // isUnquotedStringDelimiter checks if a character is a delimiter for unquoted strings.
-// Similar to isDelimiter but without ':' since a colon is allowed inside an
-// unquoted value until we detect a key/value separator.
-func isUnquotedStringDelimiter(char rune) bool {
-	switch char {
+// Similar to isDelimiter but excludes ':' since colons are allowed inside
+// unquoted values until a key/value separator is detected.
+func isUnquotedStringDelimiter(c rune) bool {
+	switch c {
 	case ',', '[', ']', '/', '{', '}', '\n', '+':
 		return true
 	}
 	return false
 }
 
-// isWhitespaceExceptNewline checks if a rune is a whitespace character except newline.
-func isWhitespaceExceptNewline(code rune) bool {
-	return code == codeSpace || code == codeTab || code == codeReturn
+// isWhitespaceExceptNewline checks if a rune is whitespace excluding newline.
+func isWhitespaceExceptNewline(c rune) bool {
+	return c == codeSpace || c == codeTab || c == codeReturn
 }
 
 // URL-related regular expressions.
@@ -226,16 +224,16 @@ var (
 )
 
 // isURLChar checks if a rune is a valid URL character.
-func isURLChar(code rune) bool {
+func isURLChar(c rune) bool {
 	switch {
-	case code >= 'A' && code <= 'Z':
+	case c >= 'A' && c <= 'Z':
 		return true
-	case code >= 'a' && code <= 'z':
+	case c >= 'a' && c <= 'z':
 		return true
-	case code >= '0' && code <= '9':
+	case c >= '0' && c <= '9':
 		return true
 	default:
-		switch code {
+		switch c {
 		case '-', '.', '_', '~', ':', '/', '?', '#', '@', '!', '$', '&', '\'', '(', ')', '*', '+', ';', '=':
 			return true
 		}
@@ -470,18 +468,18 @@ func containsPathSeparator(content string) bool {
 }
 
 // countValidPathSegments counts meaningful path segments.
-func countValidPathSegments(content string, separator string) int {
+func countValidPathSegments(content, separator string) int {
 	parts := strings.Split(content, separator)
-	meaningfulParts := 0
+	count := 0
 
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if len(part) > 0 && part != "." && part != ".." {
-			meaningfulParts++
+			count++
 		}
 	}
 
-	return meaningfulParts
+	return count
 }
 
 // hasFileExtension checks if content has a valid file extension.
@@ -664,8 +662,7 @@ func matchesAbsolutePathFormat(content string) bool {
 		isUnixAbsolutePath(content)
 }
 
-// isLikelyFilePath determines if a string looks like a file path
-// using a structured, layer-based approach.
+// isLikelyFilePath determines if a string looks like a file path.
 func isLikelyFilePath(content string) bool {
 	if len(content) < 2 {
 		return false
@@ -715,8 +712,7 @@ func isLikelyFilePath(content string) bool {
 	return hasValidPathStructure(content)
 }
 
-// analyzePotentialFilePath analyzes a portion of text to determine if it contains file paths.
-// This function has been optimized for structural detection.
+// analyzePotentialFilePath analyzes text to determine if it contains file paths.
 func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 	if startPos >= len(*text) || (*text)[startPos] != '"' {
 		return false
