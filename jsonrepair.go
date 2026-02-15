@@ -974,8 +974,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	}
 
 	// Check if this starts with a URL pattern (only when not parsing a key)
-	isURL := !isKey && (
-		(start+8 <= len(*text) && string((*text)[start:start+8]) == "https://") ||
+	isURL := !isKey && ((start+8 <= len(*text) && string((*text)[start:start+8]) == "https://") ||
 		(start+7 <= len(*text) && string((*text)[start:start+7]) == "http://") ||
 		(start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://"))
 
