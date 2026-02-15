@@ -122,13 +122,8 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 func parseWhitespaceAndSkipComments(text *[]rune, i *int, output *strings.Builder, skipNewline bool) bool {
 	start := *i
 	parseWhitespace(text, i, output, skipNewline)
-	for {
-		changed := parseComment(text, i)
-		if changed {
-			parseWhitespace(text, i, output, skipNewline)
-		} else {
-			break
-		}
+	for parseComment(text, i) {
+		parseWhitespace(text, i, output, skipNewline)
 	}
 	return *i > start
 }
@@ -136,26 +131,20 @@ func parseWhitespaceAndSkipComments(text *[]rune, i *int, output *strings.Builde
 // parseWhitespace parses whitespace characters.
 func parseWhitespace(text *[]rune, i *int, output *strings.Builder, skipNewline bool) bool {
 	start := *i
-	var whitespace strings.Builder
-
 	isW := isWhitespace
 	if !skipNewline {
 		isW = isWhitespaceExceptNewline
 	}
 
 	for *i < len(*text) && (isW((*text)[*i]) || isSpecialWhitespace((*text)[*i])) {
-		if !isSpecialWhitespace((*text)[*i]) {
-			whitespace.WriteRune((*text)[*i])
+		if isSpecialWhitespace((*text)[*i]) {
+			output.WriteRune(' ') // repair special whitespace
 		} else {
-			whitespace.WriteRune(' ') // repair special whitespace
+			output.WriteRune((*text)[*i])
 		}
 		*i++
 	}
 
-	if whitespace.Len() > 0 {
-		output.WriteString(whitespace.String())
-		return true
-	}
 	return *i > start
 }
 
@@ -167,7 +156,7 @@ func parseComment(text *[]rune, i *int) bool {
 
 	if (*text)[*i] == codeSlash && (*text)[*i+1] == codeAsterisk {
 		// Multi-line comment: skip until */
-		for *i < len(*text) && !atEndOfBlockComment(text, i) {
+		for *i < len(*text) && (*i+1 >= len(*text) || (*text)[*i] != codeAsterisk || (*text)[*i+1] != codeSlash) {
 			*i++
 		}
 		if *i+2 <= len(*text) {
@@ -215,16 +204,14 @@ func skipEscapeCharacter(text *[]rune, i *int) bool {
 func skipEllipsis(text *[]rune, i *int, output *strings.Builder) bool {
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
-	if *i+2 < len(*text) &&
-		(*text)[*i] == codeDot &&
-		(*text)[*i+1] == codeDot &&
-		(*text)[*i+2] == codeDot {
-		*i += 3
-		parseWhitespaceAndSkipComments(text, i, output, true)
-		skipCharacter(text, i, codeComma)
-		return true
+	if *i+2 >= len(*text) || (*text)[*i] != codeDot || (*text)[*i+1] != codeDot || (*text)[*i+2] != codeDot {
+		return false
 	}
-	return false
+
+	*i += 3
+	parseWhitespaceAndSkipComments(text, i, output, true)
+	skipCharacter(text, i, codeComma)
+	return true
 }
 
 // parseObject parses a JSON object.
@@ -926,12 +913,16 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 
 // parseKeywords parses JSON keywords (true, false, null) and Python keywords (True, False, None).
 func parseKeywords(text *[]rune, i *int, output *strings.Builder) bool {
-	return parseKeyword(text, i, output, "true", "true") ||
-		parseKeyword(text, i, output, "false", "false") ||
-		parseKeyword(text, i, output, "null", "null") ||
-		parseKeyword(text, i, output, "True", "true") ||
-		parseKeyword(text, i, output, "False", "false") ||
-		parseKeyword(text, i, output, "None", "null")
+	keywords := []struct{ name, value string }{
+		{"true", "true"}, {"false", "false"}, {"null", "null"},
+		{"True", "true"}, {"False", "false"}, {"None", "null"},
+	}
+	for _, kw := range keywords {
+		if parseKeyword(text, i, output, kw.name, kw.value) {
+			return true
+		}
+	}
+	return false
 }
 
 // parseKeyword parses a specific keyword from the input text.
@@ -969,50 +960,31 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		}
 
 		if j < len(*text) && (*text)[j] == codeOpenParenthesis {
-			// repair a MongoDB function call like NumberLong("2")
-			// repair a JSONP function call like callback({...});
 			*i = j + 1
-
-			// Errors in JSONP/MongoDB function call arguments are not critical:
-			// the outer function call itself is being stripped, so partial
-			// parsing of the inner value is acceptable.
 			_, _ = parseValue(text, i, output)
 
 			if *i < len(*text) && (*text)[*i] == codeCloseParenthesis {
-				// repair: skip close bracket of function call
 				*i++
 				if *i < len(*text) && (*text)[*i] == codeSemicolon {
-					// repair: skip semicolon after JSONP call
 					*i++
 				}
 			}
-
 			return true
 		}
 	}
 
 	// Check if this starts with a URL pattern (only when not parsing a key)
-	isURL := false
-	if !isKey {
-		switch {
-		case start+8 <= len(*text) && string((*text)[start:start+8]) == "https://":
-			isURL = true
-		case start+7 <= len(*text) && string((*text)[start:start+7]) == "http://":
-			isURL = true
-		case start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://":
-			isURL = true
-		}
-	}
+	isURL := !isKey && (
+		(start+8 <= len(*text) && string((*text)[start:start+8]) == "https://") ||
+		(start+7 <= len(*text) && string((*text)[start:start+7]) == "http://") ||
+		(start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://"))
 
 	if isURL {
-		// Parse as URL - continue until we hit a proper delimiter (not slash)
 		for *i < len(*text) && isURLChar((*text)[*i]) {
 			*i++
 		}
 	} else {
-		// Move the index forward until a delimiter or quote is found
 		for *i < len(*text) && !isUnquotedStringDelimiter((*text)[*i]) && !isQuote((*text)[*i]) {
-			// If we're parsing a key and encounter a colon, stop here
 			if isKey && (*text)[*i] == codeColon {
 				break
 			}
@@ -1020,42 +992,37 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		}
 	}
 
-	if *i > start {
-		// repair unquoted string
-		// also, repair undefined into null
-
-		// first, go back to prevent getting trailing whitespaces in the string
-		for *i > start && isWhitespace((*text)[*i-1]) {
-			*i--
-		}
-
-		symbol := string((*text)[start:*i])
-
-		if symbol == "undefined" {
-			output.WriteString("null")
-		} else {
-			// Ensure special quotes are replaced with double quotes
-			var repairedSymbol strings.Builder
-			for _, char := range symbol {
-				if isSingleQuoteLike(char) || isDoubleQuoteLike(char) {
-					repairedSymbol.WriteRune('"')
-				} else {
-					repairedSymbol.WriteRune(char)
-				}
-			}
-			output.WriteByte('"')
-			output.WriteString(repairedSymbol.String())
-			output.WriteByte('"')
-		}
-
-		// Skip the end quote if encountered
-		if *i < len(*text) && (*text)[*i] == codeDoubleQuote {
-			*i++
-		}
-
-		return true
+	if *i <= start {
+		return false
 	}
-	return false
+
+	// Trim trailing whitespace
+	for *i > start && isWhitespace((*text)[*i-1]) {
+		*i--
+	}
+
+	symbol := string((*text)[start:*i])
+
+	if symbol == "undefined" {
+		output.WriteString("null")
+	} else {
+		output.WriteByte('"')
+		for _, char := range symbol {
+			if isSingleQuoteLike(char) || isDoubleQuoteLike(char) {
+				output.WriteRune('"')
+			} else {
+				output.WriteRune(char)
+			}
+		}
+		output.WriteByte('"')
+	}
+
+	// Skip the end quote if encountered
+	if *i < len(*text) && (*text)[*i] == codeDoubleQuote {
+		*i++
+	}
+
+	return true
 }
 
 // parseRegex parses a regex literal like /pattern/flags and wraps it in quotes.
@@ -1111,24 +1078,25 @@ func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strin
 
 // skipMarkdownCodeBlock checks if we're at a Markdown code block marker and skips it.
 func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
-	// Parse whitespace before checking for code block markers
 	parseWhitespace(text, i, output, true)
 
 	for _, block := range blocks {
 		blockRunes := []rune(block)
 		end := *i + len(blockRunes)
-		if end <= len(*text) {
-			match := true
-			for j := range len(blockRunes) {
-				if (*text)[*i+j] != blockRunes[j] {
-					match = false
-					break
-				}
+		if end > len(*text) {
+			continue
+		}
+
+		match := true
+		for j := range len(blockRunes) {
+			if (*text)[*i+j] != blockRunes[j] {
+				match = false
+				break
 			}
-			if match {
-				*i = end
-				return true
-			}
+		}
+		if match {
+			*i = end
+			return true
 		}
 	}
 	return false

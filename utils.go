@@ -17,11 +17,6 @@ func prevNonWhitespaceIndex(text []rune, start int) int {
 	return -1
 }
 
-// atEndOfBlockComment checks if the current position is at the end of a block comment.
-func atEndOfBlockComment(text *[]rune, i *int) bool {
-	return *i+1 < len(*text) && (*text)[*i] == codeAsterisk && (*text)[*i+1] == codeSlash
-}
-
 // atEndOfNumber checks if the end of a number has been reached in the input text.
 func atEndOfNumber(text *[]rune, i *int) bool {
 	return *i >= len(*text) || isDelimiter((*text)[*i]) || isWhitespace((*text)[*i])
@@ -86,21 +81,16 @@ func isValidStringCharacter(c rune) bool {
 
 // isDelimiter checks if a character is a delimiter.
 func isDelimiter(c rune) bool {
-	switch c {
-	case ',', ':', '[', ']', '/', '{', '}', '(', ')', '\n', '+':
-		return true
-	}
-	return false
+	return c == ',' || c == ':' || c == '[' || c == ']' || c == '/' ||
+		c == '{' || c == '}' || c == '(' || c == ')' || c == '\n' || c == '+'
 }
 
 // isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(c rune) bool {
-	return c == '{' || c == '[' ||
-		c == '_' || c == '-' ||
-		(c >= 'a' && c <= 'z') ||
-		(c >= 'A' && c <= 'Z') ||
-		(c >= '0' && c <= '9') ||
-		isQuote(c)
+	if c == '{' || c == '[' || c == '_' || c == '-' || isQuote(c) {
+		return true
+	}
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 // isControlCharacter checks if a rune is a control character.
@@ -206,11 +196,8 @@ func isFunctionNameChar(c rune) bool {
 // Similar to isDelimiter but excludes ':' since colons are allowed inside
 // unquoted values until a key/value separator is detected.
 func isUnquotedStringDelimiter(c rune) bool {
-	switch c {
-	case ',', '[', ']', '/', '{', '}', '\n', '+':
-		return true
-	}
-	return false
+	return c == ',' || c == '[' || c == ']' || c == '/' ||
+		c == '{' || c == '}' || c == '\n' || c == '+'
 }
 
 // isWhitespaceExceptNewline checks if a rune is whitespace excluding newline.
@@ -225,20 +212,12 @@ var (
 
 // isURLChar checks if a rune is a valid URL character.
 func isURLChar(c rune) bool {
-	switch {
-	case c >= 'A' && c <= 'Z':
+	if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
 		return true
-	case c >= 'a' && c <= 'z':
-		return true
-	case c >= '0' && c <= '9':
-		return true
-	default:
-		switch c {
-		case '-', '.', '_', '~', ':', '/', '?', '#', '@', '!', '$', '&', '\'', '(', ')', '*', '+', ';', '=':
-			return true
-		}
-		return false
 	}
+	return c == '-' || c == '.' || c == '_' || c == '~' || c == ':' || c == '/' ||
+		c == '?' || c == '#' || c == '@' || c == '!' || c == '$' || c == '&' ||
+		c == '\'' || c == '(' || c == ')' || c == '*' || c == '+' || c == ';' || c == '='
 }
 
 // Regular expression cache for improved performance.
@@ -353,7 +332,7 @@ func isLikelyTextBlob(content string) bool {
 	}
 
 	// Contains line breaks or tabs
-	if strings.Contains(content, "\n") || strings.Contains(content, "\t") || strings.Contains(content, "\r") {
+	if strings.ContainsAny(content, "\n\t\r") {
 		return true
 	}
 
@@ -414,9 +393,7 @@ func isUNCPath(content string) bool {
 	if !strings.HasPrefix(content, `\\`) || strings.HasPrefix(content, `\\\\`) {
 		return false
 	}
-
 	parts := strings.Split(content, `\`)
-	// UNC: \\server\share\path... (parts[0]="", parts[1]="", parts[2]=server, parts[3]=share)
 	return len(parts) >= 4 && len(parts[2]) > 0 && len(parts[3]) > 0
 }
 
@@ -450,8 +427,7 @@ func isURLPath(content string) bool {
 	if strings.HasPrefix(lowerContent, "ftp://") {
 		pathPart := content[6:]
 		if slashIndex := strings.Index(pathPart, "/"); slashIndex > 0 {
-			actualPath := pathPart[slashIndex:]
-			return hasValidPathStructure(actualPath)
+			return hasValidPathStructure(pathPart[slashIndex:])
 		}
 	}
 
@@ -566,10 +542,10 @@ func hasValidPathStructure(pathStr string) bool {
 
 // isValidPathCharacter checks if a character is valid in file paths.
 func isValidPathCharacter(r rune) bool {
-	return (r >= 'a' && r <= 'z') ||
-		(r >= 'A' && r <= 'Z') ||
-		(r >= '0' && r <= '9') ||
-		r == '/' || r == '\\' || r == ':' || r == '.' ||
+	if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+		return true
+	}
+	return r == '/' || r == '\\' || r == ':' || r == '.' ||
 		r == '-' || r == '_' || r == ' ' || r == '~'
 }
 
@@ -626,32 +602,18 @@ func hasCommonFileExtension(lowerContent string) bool {
 
 // isExcludedURL checks if content is a URL that should be excluded from path detection.
 func isExcludedURL(lowerContent, content string) bool {
-	// HTTP/HTTPS URLs
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return true
 	}
-	// FTP URLs without file paths
-	if strings.HasPrefix(lowerContent, "ftp://") && !strings.Contains(content[6:], "/") {
-		return true
-	}
-	return false
+	return strings.HasPrefix(lowerContent, "ftp://") && !strings.Contains(content[6:], "/")
 }
 
 // passesEarlyExclusionFilters checks if content passes all early exclusion filters.
 func passesEarlyExclusionFilters(content string) bool {
-	if hasExcessiveEscapeSequences(content) {
-		return false
-	}
-	if isLikelyTextBlob(content) {
-		return false
-	}
-	if isBase64String(content) {
-		return false
-	}
-	if hasURLEncoding(content) {
-		return false
-	}
-	return true
+	return !hasExcessiveEscapeSequences(content) &&
+		!isLikelyTextBlob(content) &&
+		!isBase64String(content) &&
+		!hasURLEncoding(content)
 }
 
 // matchesAbsolutePathFormat checks if content matches any absolute path format.
