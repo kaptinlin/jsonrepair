@@ -47,15 +47,11 @@ func Repair(text string) (string, error) {
 
 	if i < len(runes) && isStartOfValue(runes[i]) && endsWithCommaOrNewline(output.String()) {
 		if !processedComma {
-			outputStr := insertBeforeLastWhitespace(output.String(), ",")
-			output.Reset()
-			output.WriteString(outputStr)
+			resetOutput(&output, insertBeforeLastWhitespace(output.String(), ","))
 		}
 		parseNewlineDelimitedJSON(&runes, &i, &output)
 	} else if processedComma {
-		outputStr := stripLastOccurrence(output.String(), ",", false)
-		output.Reset()
-		output.WriteString(outputStr)
+		resetOutput(&output, stripLastOccurrence(output.String(), ",", false))
 	}
 
 	// Repair redundant end quotes
@@ -176,6 +172,12 @@ func parseComment(text *[]rune, i *int) bool {
 	return false
 }
 
+// resetOutput replaces the entire output buffer with the given string.
+func resetOutput(output *strings.Builder, s string) {
+	output.Reset()
+	output.WriteString(s)
+}
+
 // parseCharacter parses a specific character and adds it to output if it matches.
 func parseCharacter(text *[]rune, i *int, output *strings.Builder, code rune) bool {
 	if *i < len(*text) && (*text)[*i] == code {
@@ -265,15 +267,12 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 								temp = temp[:idx+1]
 							}
 						}
-						output.Reset()
-						output.WriteString(temp)
+						resetOutput(output, temp)
 					}
 				} else {
 					// repair missing comma - restore output to oBefore and insert comma
 					*i = iBefore
-					tempStr := output.String()[:oBefore]
-					output.Reset()
-					output.WriteString(insertBeforeLastWhitespace(tempStr, ","))
+					resetOutput(output, insertBeforeLastWhitespace(output.String()[:oBefore], ","))
 				}
 			} else {
 				initial = false
@@ -295,9 +294,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					(*text)[*i] == codeOpeningBracket ||
 					(*text)[*i] == 0 {
 					// repair trailing comma
-					outputStr := stripLastOccurrence(output.String(), ",", false)
-					output.Reset()
-					output.WriteString(outputStr)
+					resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 				} else {
 					// TypeScript version throws "Object key expected" error here
 					return false, newObjectKeyExpectedError(*i)
@@ -311,9 +308,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			if !processedColon {
 				if (*i < len(*text) && isStartOfValue((*text)[*i])) || truncatedText {
 					// repair missing colon
-					outputStr := insertBeforeLastWhitespace(output.String(), ":")
-					output.Reset()
-					output.WriteString(outputStr)
+					resetOutput(output, insertBeforeLastWhitespace(output.String(), ":"))
 				} else {
 					// TypeScript version throws "Colon expected" error here
 					return false, newColonExpectedError(*i)
@@ -340,9 +335,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			*i++
 		} else {
 			// repair missing end bracket
-			outputStr := insertBeforeLastWhitespace(output.String(), "}")
-			output.Reset()
-			output.WriteString(outputStr)
+			resetOutput(output, insertBeforeLastWhitespace(output.String(), "}"))
 		}
 		return true, nil
 	}
@@ -375,14 +368,8 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 				processedComma := parseCharacter(text, i, output, codeComma)
 				if !processedComma {
 					*i = iBefore
-					tempStr := output.String()
-					output.Reset()
-					output.WriteString(tempStr[:oBefore])
-
 					// repair missing comma
-					outputStr := insertBeforeLastWhitespace(output.String(), ",")
-					output.Reset()
-					output.WriteString(outputStr)
+					resetOutput(output, insertBeforeLastWhitespace(output.String()[:oBefore], ","))
 				}
 			} else {
 				initial = false
@@ -419,9 +406,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					// Find the position of the opening quote for this value.
 					lastQuote := strings.LastIndex(outputStr[:len(outputStr)-2], "\"")
 					if lastQuote != -1 && len(outputStr)-2-lastQuote > 2 {
-						cleanedStr := outputStr[:len(outputStr)-2] + "\""
-						output.Reset()
-						output.WriteString(cleanedStr)
+						resetOutput(output, outputStr[:len(outputStr)-2]+"\"")
 					}
 				}
 			}
@@ -434,9 +419,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 
 			if !processedValue {
 				// repair trailing comma
-				outputStr := stripLastOccurrence(output.String(), ",", false)
-				output.Reset()
-				output.WriteString(outputStr)
+				resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 				break
 			}
 		}
@@ -446,9 +429,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			*i++
 		} else {
 			// repair missing closing array bracket
-			outputStr := insertBeforeLastWhitespace(output.String(), "]")
-			output.Reset()
-			output.WriteString(outputStr)
+			resetOutput(output, insertBeforeLastWhitespace(output.String(), "]"))
 		}
 		return true, nil
 	}
@@ -466,9 +447,7 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 			processedComma := parseCharacter(text, i, output, codeComma)
 			if !processedComma {
 				// repair: add missing comma
-				outputStr := insertBeforeLastWhitespace(output.String(), ",")
-				output.Reset()
-				output.WriteString(outputStr)
+				resetOutput(output, insertBeforeLastWhitespace(output.String(), ","))
 			}
 		} else {
 			initial = false
@@ -484,15 +463,11 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 
 	if !processedValue {
 		// repair: remove trailing comma
-		outputStr := stripLastOccurrence(output.String(), ",", false)
-		output.Reset()
-		output.WriteString(outputStr)
+		resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 	}
 
 	// repair: wrap the output inside array brackets
-	outputStr := fmt.Sprintf("[\n%s\n]", output.String())
-	output.Reset()
-	output.WriteString(outputStr)
+	resetOutput(output, "[\n"+output.String()+"\n]")
 }
 
 // parseString parses a string, handling various quote and escape scenarios.
@@ -540,9 +515,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					// so the missing end quote should be inserted before this delimiter
 					// retry parsing the string, stopping at the first next delimiter
 					*i = iBefore
-					tempStr := output.String()
-					output.Reset()
-					output.WriteString(tempStr[:oBefore])
+					resetOutput(output, output.String()[:oBefore])
 					return parseString(text, i, output, true, -1)
 				}
 
@@ -591,23 +564,17 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					switch {
 					case prevChar == ',':
 						*i = iBefore
-						tempStr := output.String()
-						output.Reset()
-						output.WriteString(tempStr[:oBefore])
+						resetOutput(output, output.String()[:oBefore])
 						return parseString(text, i, output, false, iPrevChar)
 					case isDelimiter(prevChar):
 						*i = iBefore
-						tempStr := output.String()
-						output.Reset()
-						output.WriteString(tempStr[:oBefore])
+						resetOutput(output, output.String()[:oBefore])
 						return parseString(text, i, output, true, -1)
 					}
 				}
 
 				// revert to right after the quote but before any whitespace, and continue parsing the string
-				tempStr := output.String()
-				output.Reset()
-				output.WriteString(tempStr[:oBefore])
+				resetOutput(output, output.String()[:oBefore])
 				*i = iQuote + 1
 
 				// repair unescaped quote
@@ -798,9 +765,7 @@ func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool
 		parseWhitespaceAndSkipComments(text, i, output, true)
 
 		// repair: remove the end quote of the first string
-		outputStr := stripLastOccurrence(output.String(), "\"", true)
-		output.Reset()
-		output.WriteString(outputStr)
+		resetOutput(output, stripLastOccurrence(output.String(), "\"", true))
 		start := output.Len()
 
 		// Try parseString and handle errors
@@ -811,25 +776,20 @@ func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool
 		}
 		if stringProcessed {
 			// repair: remove the start quote of the second string
-			outputStr = output.String()
+			outputStr := output.String()
 			if len(outputStr) > start {
-				output.Reset()
-				output.WriteString(removeAtIndex(outputStr, start, 1))
+				resetOutput(output, removeAtIndex(outputStr, start, 1))
 			}
 		} else {
 			// repair: remove the + because it is not followed by a string
-			outputStr = insertBeforeLastWhitespace(output.String(), "\"")
-			output.Reset()
-			output.WriteString(outputStr)
+			resetOutput(output, insertBeforeLastWhitespace(output.String(), "\""))
 		}
 	}
 
 	if !processed {
 		// revert parsing whitespace
 		*i = iBeforeWhitespace
-		tempStr := output.String()
-		output.Reset()
-		output.WriteString(tempStr[:oBeforeWhitespace])
+		resetOutput(output, output.String()[:oBeforeWhitespace])
 	}
 
 	return processed
@@ -911,13 +871,15 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 	return false
 }
 
+// jsonKeywords maps JSON and Python keyword names to their JSON equivalents.
+var jsonKeywords = []struct{ name, value string }{
+	{"true", "true"}, {"false", "false"}, {"null", "null"},
+	{"True", "true"}, {"False", "false"}, {"None", "null"},
+}
+
 // parseKeywords parses JSON keywords (true, false, null) and Python keywords (True, False, None).
 func parseKeywords(text *[]rune, i *int, output *strings.Builder) bool {
-	keywords := []struct{ name, value string }{
-		{"true", "true"}, {"false", "false"}, {"null", "null"},
-		{"True", "true"}, {"False", "false"}, {"None", "null"},
-	}
-	for _, kw := range keywords {
+	for _, kw := range jsonKeywords {
 		if parseKeyword(text, i, output, kw.name, kw.value) {
 			return true
 		}
@@ -1080,20 +1042,11 @@ func skipMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *string
 	parseWhitespace(text, i, output, true)
 
 	for _, block := range blocks {
-		blockRunes := []rune(block)
-		end := *i + len(blockRunes)
+		end := *i + len(block)
 		if end > len(*text) {
 			continue
 		}
-
-		match := true
-		for j := range len(blockRunes) {
-			if (*text)[*i+j] != blockRunes[j] {
-				match = false
-				break
-			}
-		}
-		if match {
+		if string((*text)[*i:end]) == block {
 			*i = end
 			return true
 		}

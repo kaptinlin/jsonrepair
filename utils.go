@@ -244,6 +244,8 @@ var windowsPathPatterns = []string{
 	"users\\", "documents", "desktop", "downloads", "music", "pictures", "videos", "appdata", "roaming", "public",
 	// System functional directories
 	"temp\\", "fonts", "startup", "sendto", "recent", "nethood", "cookies", "cache", "history", "favorites", "templates",
+	// Web and development directories
+	"inetpub", "wwwroot", "node_modules", "npm",
 }
 
 // unixPathPatterns contains common Unix/macOS directory patterns for path detection.
@@ -303,7 +305,7 @@ func hasExcessiveEscapeSequences(content string) bool {
 
 	// Count general escape sequences
 	escapeCount := 0
-	for i := 0; i < len(content)-1; i++ {
+	for i := range len(content) - 1 {
 		if content[i] == '\\' {
 			next := content[i+1]
 			if next == 'n' || next == 't' || next == 'r' || next == 'b' || next == 'f' || next == '"' || next == '\\' {
@@ -313,11 +315,7 @@ func hasExcessiveEscapeSequences(content string) bool {
 	}
 
 	// If more than 30% of content is escape sequences, likely not a path
-	if escapeCount > 0 && float64(escapeCount*2)/float64(len(content)) > 0.3 {
-		return true
-	}
-
-	return false
+	return escapeCount > 0 && float64(escapeCount*2)/float64(len(content)) > 0.3
 }
 
 // isLikelyTextBlob identifies content that has text-like characteristics.
@@ -511,26 +509,16 @@ func hasValidPathStructure(pathStr string) bool {
 	// Special cases for known path patterns
 	lowerPath := strings.ToLower(pathStr)
 
-	// Windows common directories
-	windowsDirs := []string{
-		"program files", "windows", "users", "temp", "system32", "documents", "programdata",
-		"desktop", "downloads", "music", "pictures", "videos", "appdata", "roaming", "public",
-		"inetpub", "wwwroot", "node_modules", "npm",
-	}
-	for _, dir := range windowsDirs {
-		if strings.Contains(lowerPath, dir) {
+	// Windows common directories - reuse package-level patterns
+	for _, pattern := range windowsPathPatterns {
+		if strings.Contains(lowerPath, pattern) {
 			return true
 		}
 	}
 
 	// Unix system directories
 	if strings.HasPrefix(pathStr, "/") {
-		unixDirs := []string{
-			"/bin/", "/etc/", "/var/", "/usr/", "/opt/", "/home/", "/tmp/", "/lib/",
-			"/proc/", "/dev/", "/sys/", "/run/", "/srv/", "/mnt/", "/media/", "/boot/",
-			"/Applications/", "/Library/", "/System/", "/Users/",
-		}
-		for _, dir := range unixDirs {
+		for _, dir := range unixPathPatterns {
 			if strings.Contains(lowerPath, dir) {
 				return true
 			}
@@ -605,7 +593,7 @@ func isExcludedURL(lowerContent, content string) bool {
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return true
 	}
-	return strings.HasPrefix(lowerContent, "ftp://") && !strings.Contains(content[6:], "/")
+	return strings.HasPrefix(lowerContent, "ftp://") && len(content) > 6 && !strings.Contains(content[6:], "/")
 }
 
 // passesEarlyExclusionFilters checks if content passes all early exclusion filters.
