@@ -205,10 +205,8 @@ func isWhitespaceExceptNewline(c rune) bool {
 	return c == codeSpace || c == codeTab || c == codeReturn
 }
 
-// URL-related regular expressions.
-var (
-	regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
-)
+// regexURLStart matches URL protocol prefixes.
+var regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
 
 // isURLChar checks if a rune is a valid URL character.
 func isURLChar(c rune) bool {
@@ -220,7 +218,8 @@ func isURLChar(c rune) bool {
 		c == '\'' || c == '(' || c == ')' || c == '*' || c == '+' || c == ';' || c == '='
 }
 
-// Regular expression cache for improved performance.
+// Pre-compiled regular expressions for improved performance.
+// These are compiled once at package initialization time.
 var (
 	leadingZeroRe            = regexp.MustCompile(`^0\d`)
 	endsWithCommaOrNewlineRe = regexp.MustCompile(`"[ \t\r]*[,\n][ \t\r]*$`)
@@ -305,7 +304,7 @@ func hasExcessiveEscapeSequences(content string) bool {
 
 	// Count general escape sequences
 	escapeCount := 0
-	for i := range len(content) - 1 {
+	for i := 0; i < len(content)-1; i++ {
 		if content[i] == '\\' {
 			next := content[i+1]
 			if next == 'n' || next == 't' || next == 'r' || next == 'b' || next == 'f' || next == '"' || next == '\\' {
@@ -674,7 +673,8 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 	hasPathSeparator := false
 
 	// Collect content until closing quote (with reasonable limit)
-	for i < len(*text) && i < startPos+150 {
+	const maxScanLength = 150
+	for i < len(*text) && i < startPos+maxScanLength {
 		char := (*text)[i]
 
 		if char == '"' {
@@ -699,10 +699,10 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 			case 'u':
 				// Unicode escape
 				if i+5 < len(*text) {
-					for j := range 6 {
-						contentBuilder.WriteRune((*text)[i+j])
+					for range 6 {
+						contentBuilder.WriteRune((*text)[i])
+						i++
 					}
-					i += 6
 					continue
 				}
 			}

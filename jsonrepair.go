@@ -622,24 +622,26 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 					}
 				} else if char == 'u' {
 					// Handle Unicode escape sequences
+					const unicodeEscapeLen = 6
+					const hexDigits = 4
 					j := 2
 					hexCount := 0
 					// Count valid hex characters
-					for j < 6 && *i+j < len(*text) && isHex((*text)[*i+j]) {
+					for j < unicodeEscapeLen && *i+j < len(*text) && isHex((*text)[*i+j]) {
 						j++
 						hexCount++
 					}
 
 					switch {
-					case hexCount == 4:
+					case hexCount == hexDigits:
 						if mightContainFilePaths {
 							// In file path context, escape the backslash as literal
 							str.WriteString("\\\\")
 							*i++
 						} else {
 							// Valid Unicode escape sequence - keep as is
-							str.WriteString(string((*text)[*i : *i+6]))
-							*i += 6
+							str.WriteString(string((*text)[*i : *i+unicodeEscapeLen]))
+							*i += unicodeEscapeLen
 						}
 					case *i+j >= len(*text):
 						// repair invalid or truncated unicode char at the end of the text
@@ -658,7 +660,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							} else {
 								// Still looks like malformed Unicode escape - throw error
 								endJ := 2 // Start after \u
-								for endJ < 6 && *i+endJ < len(*text) {
+								for endJ < unicodeEscapeLen && *i+endJ < len(*text) {
 									nextChar := (*text)[*i+endJ]
 									if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
 										break
@@ -673,7 +675,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 						} else {
 							// Not in file path context or malformed Unicode - throw error
 							endJ := 2 // Start after \u
-							for endJ < 6 && *i+endJ < len(*text) {
+							for endJ < unicodeEscapeLen && *i+endJ < len(*text) {
 								nextChar := (*text)[*i+endJ]
 								// Stop at whitespace or string delimiters
 								if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
@@ -687,7 +689,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
 
 							// Add extra quote only for incomplete sequences like "\u26"
-							if hexCount < 4 && endJ == 2+hexCount {
+							if hexCount < hexDigits && endJ == 2+hexCount {
 								// Incomplete sequence like "\u26" needs extra quote
 								msg := fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars)
 								return false, newInvalidUnicodeError(msg, *i)
