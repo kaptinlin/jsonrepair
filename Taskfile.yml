@@ -8,7 +8,10 @@ vars:
   REQUIRED_GOLANGCI_LINT_VERSION:
     sh: cat .golangci.version 2>/dev/null || echo "2.9.0"
   GOLANGCI_LINT_VERSION:
-    sh: '{{.GOLANGCI_LINT_BINARY}} version --format short 2>/dev/null || {{.GOLANGCI_LINT_BINARY}} version --short 2>/dev/null || echo "not-installed"'
+    sh: |
+      {{.GOLANGCI_LINT_BINARY}} version --format short 2>/dev/null ||
+      {{.GOLANGCI_LINT_BINARY}} version --short 2>/dev/null ||
+      echo "not-installed"
 
 env:
   GOBIN: '{{.GOBIN}}'
@@ -67,8 +70,9 @@ tasks:
       - mkdir -p {{.GOBIN}}
       - |
         if [ "{{.GOLANGCI_LINT_VERSION}}" != "{{.REQUIRED_GOLANGCI_LINT_VERSION}}" ]; then
-          echo "Installing golangci-lint v{{.REQUIRED_GOLANGCI_LINT_VERSION}} (current: {{.GOLANGCI_LINT_VERSION}})..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b {{.GOBIN}} v{{.REQUIRED_GOLANGCI_LINT_VERSION}}
+          echo "Installing golangci-lint v{{.REQUIRED_GOLANGCI_LINT_VERSION}}..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b {{.GOBIN}} v{{.REQUIRED_GOLANGCI_LINT_VERSION}}
           echo "golangci-lint v{{.REQUIRED_GOLANGCI_LINT_VERSION}} installed successfully"
         fi
     status:
@@ -90,6 +94,21 @@ tasks:
       - go mod tidy
       - git diff --exit-code -- go.mod go.sum
 
+  markdownlint:
+    desc: Run markdownlint
+    cmds:
+      - markdownlint-cli2 "**/*.md"
+
+  yamllint:
+    desc: Run yamllint
+    cmds:
+      - yamllint -s .
+
+  vuln:
+    desc: Run govulncheck
+    cmds:
+      - govulncheck ./...
+
   fmt:
     desc: Format Go code
     cmds:
@@ -103,11 +122,12 @@ tasks:
       - go vet ./...
 
   verify:
-    desc: Run all verification steps (deps, format, vet, lint, test)
+    desc: Run all verification steps (deps, format, vet, lint, test, vuln)
     cmds:
       - task: deps
       - task: fmt
       - task: vet
       - task: lint
       - task: test
+      - task: vuln
       - echo "All verification steps completed successfully ✅"
