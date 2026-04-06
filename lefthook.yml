@@ -13,9 +13,8 @@ pre-commit:
   jobs:
     - name: trailing-whitespace
       glob: "*.{go,yml,yaml,json,md,mod,sum}"
-      run: >
-        sed -i '' 's/[[:space:]]*$//' {staged_files} &&
-        git add {staged_files}
+      stage_fixed: true
+      run: sed -i '' 's/[[:space:]]*$//' {staged_files}
 
     - name: gitleaks
       run: gitleaks protect --staged --no-banner
