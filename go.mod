@@ -1,6 +1,6 @@
 module github.com/kaptinlin/jsonrepair
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e
