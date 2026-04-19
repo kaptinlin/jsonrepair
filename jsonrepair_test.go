@@ -13,7 +13,7 @@ import (
 // TestParseFullJSONObject tests parsing a full JSON object.
 func TestParseFullJSONObject(t *testing.T) {
 	text := `{"a":2.3e100,"b":"str","c":null,"d":false,"e":[1,2,3]}`
-	parsed, err := JSONRepair(text)
+	parsed, err := Repair(text)
 	require.NoError(t, err)
 	assert.Equal(t, text, parsed)
 }
@@ -558,11 +558,11 @@ func TestShouldStripMongoDBDataTypes(t *testing.T) {
 
 // TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString tests not matching MongoDB-like functions in an unquoted string.
 func TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString(t *testing.T) {
-	result1, err1 := JSONRepair(`["This is C(2)", "This is F(3)]`)
+	result1, err1 := Repair(`["This is C(2)", "This is F(3)]`)
 	require.NoError(t, err1)
 	assert.NotEmpty(t, result1)
 
-	result2, err2 := JSONRepair(`["This is C(2)", This is F(3)]`)
+	result2, err2 := Repair(`["This is C(2)", This is F(3)]`)
 	require.NoError(t, err2)
 	assert.NotEmpty(t, result2)
 }
@@ -758,7 +758,7 @@ func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
 // assertRepairFailureExact checks that the error message and position match exactly.
 func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expectedPos int) {
 	t.Helper()
-	result, err := JSONRepair(text)
+	result, err := Repair(text)
 	require.Error(t, err)
 
 	var repairErr *Error
@@ -770,14 +770,14 @@ func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expecte
 
 func assertRepairEqual(t *testing.T, text string) {
 	t.Helper()
-	result, err := JSONRepair(text)
+	result, err := Repair(text)
 	require.NoError(t, err)
 	assert.Equal(t, text, result)
 }
 
 func assertRepair(t *testing.T, text string, expected string) {
 	t.Helper()
-	result, err := JSONRepair(text)
+	result, err := Repair(text)
 	require.NoError(t, err)
 	assert.Equal(t, expected, result)
 }
@@ -788,7 +788,7 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 	testString := `{"message": "hello world\`
 
 	// This should not panic, even with incomplete escape sequences
-	result, err := JSONRepair(testString)
+	result, err := Repair(testString)
 
 	// We expect either a successful repair or an error, but not a panic
 	if err != nil {
@@ -806,7 +806,7 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
-			result, err := JSONRepair(testCase)
+			result, err := Repair(testCase)
 			// Should not panic
 			if err != nil {
 				t.Logf("Case %d got error: %v", i, err)
@@ -875,7 +875,7 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := JSONRepair(tc.input)
+			result, err := Repair(tc.input)
 			require.NoError(t, err, "Should not error: %s", tc.desc)
 			assert.Equal(t, tc.expected, result, "Failed: %s", tc.desc)
 		})
@@ -956,8 +956,8 @@ func TestJSONEscapeSequenceCompliance(t *testing.T) {
 	assertRepair(t, invalidJSON, expectedJSON)
 }
 
-// BenchmarkJSONRepair benchmarks the JSON repair function across various scenarios
-func BenchmarkJSONRepair(b *testing.B) {
+// BenchmarkRepair benchmarks the JSON repair function across various scenarios
+func BenchmarkRepair(b *testing.B) {
 	testCases := []struct {
 		name  string
 		input string
@@ -978,7 +978,7 @@ func BenchmarkJSONRepair(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = JSONRepair(tc.input)
+				_, _ = Repair(tc.input)
 			}
 		})
 	}

@@ -70,13 +70,6 @@ func Repair(text string) (string, error) {
 	return "", newUnexpectedCharacterError(message, i)
 }
 
-// JSONRepair is a deprecated alias for [Repair].
-//
-// Deprecated: Use [Repair] instead.
-func JSONRepair(text string) (string, error) {
-	return Repair(text)
-}
-
 // parseValue determines the type of the next value and parses it.
 // Returns (success, error) where error is non-nil for non-repairable issues.
 func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {

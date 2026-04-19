@@ -39,7 +39,7 @@ go test -bench=. -benchmem
 
 ### Recursive Descent Parser with Repair
 
-The library uses a **single-pass recursive descent parser** that repairs JSON as it parses. The main entry point is `Repair()` (with deprecated alias `JSONRepair()`).
+The library uses a **single-pass recursive descent parser** that repairs JSON as it parses. The main entry point is `Repair()`.
 
 **Core parsing functions:**
 - `parseValue()` - Dispatches to type-specific parsers
@@ -83,9 +83,6 @@ Parser operates on **runes ([]rune)** for proper Unicode handling. Two pointers 
 ```go
 // Main repair function
 func Repair(text string) (string, error)
-
-// Deprecated alias
-func JSONRepair(text string) (string, error)
 ```
 
 ### Error Handling

@@ -79,8 +79,6 @@ func main() {
 func Repair(text string) (string, error)
 ```
 
-> **Note:** The previous `JSONRepair` function is still available as a deprecated alias for `Repair`.
-
 ### Error Handling
 
 The library returns structured `*jsonrepair.Error` values with position information:
