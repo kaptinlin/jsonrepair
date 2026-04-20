@@ -756,6 +756,118 @@ func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
 	assertRepairFailureExact(t, "\"abc\u001f\"", `invalid character "\\u001f"`, 4)
 }
 
+func TestErrorMethods(t *testing.T) {
+	t.Parallel()
+
+	underlying := ErrUnexpectedCharacter
+	tests := []struct {
+		name       string
+		err        *Error
+		wantString string
+		wantErr    error
+	}{
+		{
+			name:       "with underlying error",
+			err:        &Error{Message: "parse failed", Position: 12, Err: underlying},
+			wantString: "parse failed at position 12: unexpected character",
+			wantErr:    underlying,
+		},
+		{
+			name:       "without underlying error",
+			err:        &Error{Message: "parse failed", Position: 12},
+			wantString: "parse failed at position 12",
+			wantErr:    nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.wantString, tc.err.Error())
+			if tc.wantErr == nil {
+				assert.Nil(t, tc.err.Unwrap())
+			} else {
+				assert.Same(t, tc.wantErr, tc.err.Unwrap())
+			}
+		})
+	}
+}
+
+func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		input        string
+		wantSentinel error
+		wantMessage  string
+		wantPosition int
+	}{
+		{
+			name:         "unexpected end",
+			input:        "",
+			wantSentinel: ErrUnexpectedEnd,
+			wantMessage:  "unexpected end of json string",
+			wantPosition: 0,
+		},
+		{
+			name:         "object key expected",
+			input:        `{:2}`,
+			wantSentinel: ErrObjectKeyExpected,
+			wantMessage:  "object key expected",
+			wantPosition: 1,
+		},
+		{
+			name:         "colon expected",
+			input:        `{"a",`,
+			wantSentinel: ErrColonExpected,
+			wantMessage:  "colon expected",
+			wantPosition: 4,
+		},
+		{
+			name:         "invalid character",
+			input:        "\"abc\u0000\"",
+			wantSentinel: ErrInvalidCharacter,
+			wantMessage:  `invalid character "\\u0000"`,
+			wantPosition: 4,
+		},
+		{
+			name:         "unexpected character",
+			input:        `{"a":2}foo`,
+			wantSentinel: ErrUnexpectedCharacter,
+			wantMessage:  `unexpected character "f"`,
+			wantPosition: 7,
+		},
+		{
+			name:         "invalid unicode",
+			input:        `"\uZ000"`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\uZ000"`,
+			wantPosition: 1,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := Repair(tc.input)
+			require.Error(t, err)
+			assert.Empty(t, result)
+			require.ErrorIs(t, err, tc.wantSentinel)
+
+			var repairErr *Error
+			require.ErrorAs(t, err, &repairErr)
+			assert.Equal(t, tc.wantMessage, repairErr.Message)
+			assert.Equal(t, tc.wantPosition, repairErr.Position)
+			assert.Same(t, tc.wantSentinel, repairErr.Err)
+			assert.Equal(t, fmt.Sprintf("%s at position %d: %v", tc.wantMessage, tc.wantPosition, tc.wantSentinel), repairErr.Error())
+			assert.Same(t, tc.wantSentinel, repairErr.Unwrap())
+		})
+	}
+}
+
 // assertRepairFailureExact checks that the error message and position match exactly.
 func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expectedPos int) {
 	t.Helper()
