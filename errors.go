@@ -35,27 +35,30 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
-// Simplified error constructors - inline the common pattern
+func newError(message string, position int, err error) *Error {
+	return &Error{Message: message, Position: position, Err: err}
+}
+
 func newUnexpectedEndError(position int) *Error {
-	return &Error{Message: "unexpected end of json string", Position: position, Err: ErrUnexpectedEnd}
+	return newError(ErrUnexpectedEnd.Error(), position, ErrUnexpectedEnd)
 }
 
 func newObjectKeyExpectedError(position int) *Error {
-	return &Error{Message: "object key expected", Position: position, Err: ErrObjectKeyExpected}
+	return newError(ErrObjectKeyExpected.Error(), position, ErrObjectKeyExpected)
 }
 
 func newColonExpectedError(position int) *Error {
-	return &Error{Message: "colon expected", Position: position, Err: ErrColonExpected}
+	return newError(ErrColonExpected.Error(), position, ErrColonExpected)
 }
 
 func newUnexpectedCharacterError(message string, position int) *Error {
-	return &Error{Message: message, Position: position, Err: ErrUnexpectedCharacter}
+	return newError(message, position, ErrUnexpectedCharacter)
 }
 
 func newInvalidUnicodeError(message string, position int) *Error {
-	return &Error{Message: message, Position: position, Err: ErrInvalidUnicode}
+	return newError(message, position, ErrInvalidUnicode)
 }
 
 func newInvalidCharacterError(message string, position int) *Error {
-	return &Error{Message: message, Position: position, Err: ErrInvalidCharacter}
+	return newError(message, position, ErrInvalidCharacter)
 }

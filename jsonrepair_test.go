@@ -806,6 +806,71 @@ func TestErrorMethods(t *testing.T) {
 	}
 }
 
+func TestErrorConstructors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		build        func() *Error
+		wantMessage  string
+		wantPosition int
+		wantErr      error
+	}{
+		{
+			name:         "unexpected end",
+			build:        func() *Error { return newUnexpectedEndError(1) },
+			wantMessage:  ErrUnexpectedEnd.Error(),
+			wantPosition: 1,
+			wantErr:      ErrUnexpectedEnd,
+		},
+		{
+			name:         "object key expected",
+			build:        func() *Error { return newObjectKeyExpectedError(2) },
+			wantMessage:  ErrObjectKeyExpected.Error(),
+			wantPosition: 2,
+			wantErr:      ErrObjectKeyExpected,
+		},
+		{
+			name:         "colon expected",
+			build:        func() *Error { return newColonExpectedError(3) },
+			wantMessage:  ErrColonExpected.Error(),
+			wantPosition: 3,
+			wantErr:      ErrColonExpected,
+		},
+		{
+			name:         "unexpected character",
+			build:        func() *Error { return newUnexpectedCharacterError(`unexpected character "x"`, 4) },
+			wantMessage:  `unexpected character "x"`,
+			wantPosition: 4,
+			wantErr:      ErrUnexpectedCharacter,
+		},
+		{
+			name:         "invalid unicode",
+			build:        func() *Error { return newInvalidUnicodeError(`invalid unicode character "\\u1234"`, 5) },
+			wantMessage:  `invalid unicode character "\\u1234"`,
+			wantPosition: 5,
+			wantErr:      ErrInvalidUnicode,
+		},
+		{
+			name:         "invalid character",
+			build:        func() *Error { return newInvalidCharacterError(`invalid character "\\u0000"`, 6) },
+			wantMessage:  `invalid character "\\u0000"`,
+			wantPosition: 6,
+			wantErr:      ErrInvalidCharacter,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.build()
+
+			assert.Equal(t, tc.wantMessage, got.Message)
+			assert.Equal(t, tc.wantPosition, got.Position)
+			assert.Same(t, tc.wantErr, got.Err)
+		})
+	}
+}
+
 func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
 	t.Parallel()
 
