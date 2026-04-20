@@ -104,7 +104,7 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	processed = stringProcessed ||
 		parseNumber(text, i, output) ||
 		parseKeywords(text, i, output) ||
-		parseUnquotedString(text, i, output) ||
+		parseUnquotedStringWithMode(text, i, output, false) ||
 		parseRegex(text, i, output)
 
 	parseWhitespaceAndSkipComments(text, i, output, true)
@@ -192,11 +192,6 @@ func skipCharacter(text *[]rune, i *int, code rune) bool {
 		return true
 	}
 	return false
-}
-
-// skipEscapeCharacter skips a backslash escape character.
-func skipEscapeCharacter(text *[]rune, i *int) bool {
-	return skipCharacter(text, i, codeBackslash)
 }
 
 // skipEllipsis skips ellipsis (three dots) in arrays or objects.
@@ -742,7 +737,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 
 			if skipEscapeChars {
 				// repair: skipped escape character (nothing to do)
-				skipEscapeCharacter(text, i)
+				skipCharacter(text, i, codeBackslash)
 			}
 		}
 	}
@@ -894,11 +889,6 @@ func parseKeyword(text *[]rune, i *int, output *strings.Builder, name, value str
 		return true
 	}
 	return false
-}
-
-// parseUnquotedString parses unquoted strings, MongoDB function calls, and JSONP function calls.
-func parseUnquotedString(text *[]rune, i *int, output *strings.Builder) bool {
-	return parseUnquotedStringWithMode(text, i, output, false)
 }
 
 // parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.

@@ -175,6 +175,18 @@ func TestShouldParseUnquotedString(t *testing.T) {
 	assertRepair(t, `["This is C(2)", This is F(3)]`, `["This is C(2)", "This is F(3)"]`)
 }
 
+func TestParseUnquotedStringWithModeValueParsesURLs(t *testing.T) {
+	text := []rune(`https://www.example.com/path?q=1`)
+	var output strings.Builder
+	index := 0
+
+	processed := parseUnquotedStringWithMode(&text, &index, &output, false)
+
+	require.True(t, processed)
+	assert.Equal(t, len(text), index)
+	assert.Equal(t, `"https://www.example.com/path?q=1"`, output.String())
+}
+
 // TestShouldAddMissingQuotes tests repairing missing quotes in JSON.
 func TestShouldAddMissingQuotes(t *testing.T) {
 	assertRepair(t, `abc`, `"abc"`)
