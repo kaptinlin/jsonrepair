@@ -299,7 +299,7 @@ func hasExcessiveEscapeSequences(content string) bool {
 
 	// Count general escape sequences
 	escapeCount := 0
-	for i := 0; i < len(content)-1; i++ {
+	for i := range len(content) - 1 {
 		if content[i] == '\\' {
 			next := content[i+1]
 			if next == 'n' || next == 't' || next == 'r' || next == 'b' || next == 'f' || next == '"' || next == '\\' {
@@ -404,21 +404,21 @@ func isURLPath(content string) bool {
 	}
 
 	// File protocol
-	if strings.HasPrefix(lowerContent, "file://") {
-		pathPart := content[7:]
+	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "file://"); ok {
+		pathPart := content[len(content)-len(lowerPathPart):]
 		return len(pathPart) > 1 && hasValidPathStructure(pathPart)
 	}
 
 	// SMB/CIFS protocol
-	if strings.HasPrefix(lowerContent, "smb://") {
-		pathPart := content[6:]
+	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "smb://"); ok {
+		pathPart := content[len(content)-len(lowerPathPart):]
 		return len(pathPart) > 1 && hasValidPathStructure(pathPart)
 	}
 
 	// FTP with file path
-	if strings.HasPrefix(lowerContent, "ftp://") {
-		pathPart := content[6:]
-		if slashIndex := strings.Index(pathPart, "/"); slashIndex > 0 {
+	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "ftp://"); ok {
+		pathPart := content[len(content)-len(lowerPathPart):]
+		if slashIndex := strings.Index(lowerPathPart, "/"); slashIndex > 0 {
 			return hasValidPathStructure(pathPart[slashIndex:])
 		}
 	}
@@ -587,7 +587,11 @@ func isExcludedURL(lowerContent, content string) bool {
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return true
 	}
-	return strings.HasPrefix(lowerContent, "ftp://") && len(content) > 6 && !strings.Contains(content[6:], "/")
+	if lowerFTPPath, ok := strings.CutPrefix(lowerContent, "ftp://"); ok {
+		ftpPath := content[len(content)-len(lowerFTPPath):]
+		return !strings.Contains(ftpPath, "/")
+	}
+	return false
 }
 
 // passesEarlyExclusionFilters checks if content passes all early exclusion filters.

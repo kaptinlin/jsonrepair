@@ -227,6 +227,27 @@ func TestIsURLPath(t *testing.T) {
 	}
 }
 
+func TestIsExcludedURL(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+		desc     string
+	}{
+		{"http://example.com", true, "HTTP URL"},
+		{"https://example.com/api/data", true, "HTTPS URL"},
+		{"ftp://ftp.example.com", true, "FTP host without file path"},
+		{"FTP://FILES.DOMAIN.ORG", true, "Uppercase FTP host without file path"},
+		{"ftp://ftp.example.com/pub/files/data.csv", false, "FTP URL with file path"},
+		{"smb://server/share/file.txt", false, "SMB file path"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			assert.Equal(t, tc.expected, isExcludedURL(strings.ToLower(tc.input), tc.input))
+		})
+	}
+}
+
 // TestHasValidPathStructure tests the path structure validation function.
 func TestHasValidPathStructure(t *testing.T) {
 	positiveTests := []struct {
