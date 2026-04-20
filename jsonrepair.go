@@ -777,7 +777,7 @@ func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool
 			// repair: remove the start quote of the second string
 			outputStr := output.String()
 			if len(outputStr) > start {
-				resetOutput(output, removeAtIndex(outputStr, start, 1))
+				resetOutput(output, outputStr[:start]+outputStr[start+1:])
 			}
 		} else {
 			// repair: remove the + because it is not followed by a string

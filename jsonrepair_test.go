@@ -619,6 +619,7 @@ func TestShouldConcatenateStrings(t *testing.T) {
 	assertRepair(t, `"a"+"b"+"c"`, `"abc"`)
 	assertRepair(t, `"hello" + /*comment*/ " world"`, `"hello world"`)
 	assertRepair(t, "{\n  \"greeting\": 'hello' +\n 'world'\n}", "{\n  \"greeting\": \"helloworld\"\n}")
+	assertRepair(t, `"hello" + "" + " world"`, `"hello world"`)
 
 	assertRepair(t, "\"hello +\n \" world\"", `"hello world"`)
 	assertRepair(t, `"hello +`, `"hello"`)

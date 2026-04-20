@@ -56,11 +56,6 @@ func insertBeforeLastWhitespace(s, text string) string {
 	return s[:index+1] + text + s[index+1:]
 }
 
-// removeAtIndex removes a substring from the input text at a specific index.
-func removeAtIndex(text string, start, count int) string {
-	return text[:start] + text[start+count:]
-}
-
 // isHex checks if a rune is a hexadecimal digit.
 func isHex(c rune) bool {
 	return (c >= codeZero && c <= codeNine) ||
