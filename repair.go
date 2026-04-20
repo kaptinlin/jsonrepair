@@ -14,13 +14,9 @@ import (
 	"github.com/go-json-experiment/json"
 )
 
-// Repair attempts to repair the given JSON string and returns the repaired version.
-// It handles common issues such as missing quotes, trailing commas, comments,
-// single quotes, and truncated JSON.
+// Repair repairs malformed JSON-like input into valid JSON.
 //
-// Returns an error if:
-//   - The input is empty
-//   - The JSON contains non-repairable issues (structured [*Error] with position)
+// It returns a structured [*Error] when the input is empty or cannot be repaired.
 func Repair(text string) (string, error) {
 	if len(text) == 0 {
 		return "", newUnexpectedEndError(0)
@@ -30,7 +26,6 @@ func Repair(text string) (string, error) {
 	i := 0
 	var output strings.Builder
 
-	// Parse leading Markdown code block
 	parseMarkdownCodeBlock(&runes, &i, []string{"```", "[```", "{```"}, &output)
 
 	success, err := parseValue(&runes, &i, &output)
@@ -41,7 +36,6 @@ func Repair(text string) (string, error) {
 		return "", newUnexpectedEndError(len(runes))
 	}
 
-	// Parse trailing Markdown code block
 	parseMarkdownCodeBlock(&runes, &i, []string{"```", "```]", "```}"}, &output)
 
 	processedComma := parseCharacter(&runes, &i, &output, codeComma)
@@ -58,7 +52,6 @@ func Repair(text string) (string, error) {
 		resetOutput(&output, stripLastOccurrence(output.String(), ",", false))
 	}
 
-	// Repair redundant end quotes
 	for i < len(runes) && (runes[i] == codeClosingBrace || runes[i] == codeClosingBracket) {
 		i++
 		parseWhitespaceAndSkipComments(&runes, &i, &output, true)
@@ -288,7 +281,6 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					// repair trailing comma
 					resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 				} else {
-					// TypeScript version throws "Object key expected" error here
 					return false, newObjectKeyExpectedError(*i)
 				}
 				break
@@ -302,13 +294,11 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					// repair missing colon
 					resetOutput(output, insertBeforeLastWhitespace(output.String(), ":"))
 				} else {
-					// TypeScript version throws "Colon expected" error here
 					return false, newColonExpectedError(*i)
 				}
 			}
 			processedValue, err := parseValue(text, i, output)
 			if err != nil {
-				// Forward error from parseValue
 				return false, err
 			}
 			if !processedValue {
@@ -316,7 +306,6 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					// repair missing object value
 					output.WriteString("null")
 				} else {
-					// throwColonExpected() equivalent
 					return false, nil
 				}
 			}
@@ -371,7 +360,6 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 
 			processedValue, err := parseValue(text, i, output)
 			if err != nil {
-				// Forward error from parseValue
 				return false, err
 			}
 
@@ -435,7 +423,6 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 
 	for processedValue {
 		if !initial {
-			// parse optional comma, insert when missing
 			processedComma := parseCharacter(text, i, output, codeComma)
 			if !processedComma {
 				// repair: add missing comma
@@ -448,17 +435,14 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 		var err error
 		processedValue, err = parseValue(text, i, output)
 		if err != nil {
-			// For now, treat errors as parse failure in NDJSON context
 			processedValue = false
 		}
 	}
 
 	if !processedValue {
-		// repair: remove trailing comma
 		resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 	}
 
-	// repair: wrap the output inside array brackets
 	resetOutput(output, "[\n"+output.String()+"\n]")
 }
 
@@ -491,7 +475,6 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 		iBefore := *i
 		oBefore := output.Len()
 
-		// Analyze if this string might contain file paths
 		mightContainFilePaths := analyzePotentialFilePath(text, *i)
 
 		var str strings.Builder
@@ -804,10 +787,7 @@ func parseNumber(text *[]rune, i *int, output *strings.Builder) bool {
 		}
 	}
 
-	// Note that in JSON leading zeros like "00789" are not allowed.
-	// We will allow all leading zeros here though and at the end of parseNumber
-	// check against trailing zeros and repair that if needed.
-	// Leading zeros can have meaning, so we should not clear them.
+	// Preserve leading zeros by quoting the token instead of rewriting its value.
 	for *i < len(*text) && isDigit((*text)[*i]) {
 		*i++
 	}
@@ -946,7 +926,6 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		return false
 	}
 
-	// Trim trailing whitespace
 	for *i > start && isWhitespace((*text)[*i-1]) {
 		*i--
 	}
@@ -967,7 +946,6 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		output.WriteByte('"')
 	}
 
-	// Skip the end quote if encountered
 	if *i < len(*text) && (*text)[*i] == codeDoubleQuote {
 		*i++
 	}

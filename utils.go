@@ -226,10 +226,6 @@ var (
 	urlEncodingRe            = regexp.MustCompile(`%[0-9a-fA-F]{2}`)
 )
 
-// ================================
-// PATH PATTERN CONSTANTS
-// ================================
-
 // windowsPathPatterns contains common Windows directory patterns for path detection.
 var windowsPathPatterns = []string{
 	// System directories
@@ -277,10 +273,6 @@ var commonFileExtensions = []string{
 	// Data files
 	".dat", ".bin", ".raw", ".dump",
 }
-
-// ================================
-// EARLY EXCLUSION FILTERS
-// ================================
 
 // hasExcessiveEscapeSequences checks if content has too many escape sequences to be a valid file path.
 func hasExcessiveEscapeSequences(content string) bool {
@@ -371,10 +363,6 @@ func hasURLEncoding(content string) bool {
 	return urlEncodingRe.MatchString(content)
 }
 
-// ================================
-// PATH FORMAT DETECTION
-// ================================
-
 // isWindowsAbsolutePath checks for Windows absolute paths (drive letter format).
 func isWindowsAbsolutePath(content string) bool {
 	return driveLetterRe.MatchString(content) || containsDriveRe.MatchString(content)
@@ -425,10 +413,6 @@ func isURLPath(content string) bool {
 
 	return false
 }
-
-// ================================
-// STRUCTURAL VALIDATION
-// ================================
 
 // containsPathSeparator checks if content contains valid path separators.
 func containsPathSeparator(content string) bool {
@@ -548,10 +532,6 @@ func hasReasonableCharacterDistribution(content string) bool {
 	return float64(validChars)/float64(len(content)) >= 0.7
 }
 
-// ================================
-// MAIN PATH DETECTION
-// ================================
-
 // matchesWindowsPathPattern checks if content matches common Windows directory patterns.
 func matchesWindowsPathPattern(lowerContent, content string) bool {
 	for _, pattern := range windowsPathPatterns {
@@ -618,37 +598,30 @@ func isLikelyFilePath(content string) bool {
 
 	lowerContent := strings.ToLower(content)
 
-	// Early URL exclusions
 	if isExcludedURL(lowerContent, content) {
 		return false
 	}
 
-	// Early exclusion filters
 	if !passesEarlyExclusionFilters(content) {
 		return false
 	}
 
-	// Format-specific detection (high confidence)
 	if matchesAbsolutePathFormat(content) {
 		return true
 	}
 
-	// Check for common Windows directory patterns
 	if matchesWindowsPathPattern(lowerContent, content) {
 		return true
 	}
 
-	// Check for Unix system directory patterns
 	if strings.Contains(content, "/") && matchesUnixPathPattern(lowerContent) {
 		return true
 	}
 
-	// Structural validation for relative paths
 	if !containsPathSeparator(content) {
 		return false
 	}
 
-	// Check for common file extensions
 	if hasFileExtension(content) && hasCommonFileExtension(lowerContent) {
 		return true
 	}

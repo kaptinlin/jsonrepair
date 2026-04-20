@@ -5,21 +5,29 @@ import (
 	"fmt"
 )
 
-// Predefined error variables for use with errors.Is().
 var (
-	ErrUnexpectedEnd       = errors.New("unexpected end of json string")
-	ErrObjectKeyExpected   = errors.New("object key expected")
-	ErrColonExpected       = errors.New("colon expected")
-	ErrInvalidCharacter    = errors.New("invalid character")
+	// ErrUnexpectedEnd reports that the input ended before the JSON value was complete.
+	ErrUnexpectedEnd = errors.New("unexpected end of json string")
+	// ErrObjectKeyExpected reports that an object key could not be parsed.
+	ErrObjectKeyExpected = errors.New("object key expected")
+	// ErrColonExpected reports that an object key is not followed by a colon.
+	ErrColonExpected = errors.New("colon expected")
+	// ErrInvalidCharacter reports an invalid character inside a JSON string.
+	ErrInvalidCharacter = errors.New("invalid character")
+	// ErrUnexpectedCharacter reports a character that cannot be repaired in context.
 	ErrUnexpectedCharacter = errors.New("unexpected character")
-	ErrInvalidUnicode      = errors.New("invalid unicode character")
+	// ErrInvalidUnicode reports an invalid Unicode escape sequence.
+	ErrInvalidUnicode = errors.New("invalid unicode character")
 )
 
-// Error represents a structured JSON repair error with position information.
+// Error reports a non-repairable parse error and its position.
 type Error struct {
-	Message  string
+	// Message describes the repair failure.
+	Message string
+	// Position is the rune offset where parsing failed.
 	Position int
-	Err      error // underlying error for errors.Is/As support
+	// Err is the underlying sentinel for errors.Is and errors.As.
+	Err error
 }
 
 // Error implements the error interface.
