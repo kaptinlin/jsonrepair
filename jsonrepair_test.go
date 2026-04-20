@@ -758,7 +758,14 @@ func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
 // assertRepairFailureExact checks that the error message and position match exactly.
 func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expectedPos int) {
 	t.Helper()
-	result, err := Repair(text)
+
+	var (
+		result string
+		err    error
+	)
+	assert.NotPanics(t, func() {
+		result, err = Repair(text)
+	})
 	require.Error(t, err)
 
 	var repairErr *Error
@@ -784,21 +791,8 @@ func assertRepair(t *testing.T, text string, expected string) {
 
 // TestShouldNotPanicOnIncompleteEscapeSymbols tests that incomplete escape symbols don't cause panic.
 func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
-	// Simple test case with incomplete escape sequence at the end
-	testString := `{"message": "hello world\`
-
-	// This should not panic, even with incomplete escape sequences
-	result, err := Repair(testString)
-
-	// We expect either a successful repair or an error, but not a panic
-	if err != nil {
-		t.Logf("Got expected error: %v", err)
-	} else {
-		t.Logf("Successfully repaired to: %s", result)
-	}
-
-	// Test with a few more edge cases
 	testCases := []string{
+		`{"message": "hello world\`,
 		`{"text": "incomplete escape\`,
 		`["item1", "item2", "incomplete\`,
 		`{"nested": {"value": "end with backslash\`,
@@ -806,13 +800,9 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
-			result, err := Repair(testCase)
-			// Should not panic
-			if err != nil {
-				t.Logf("Case %d got error: %v", i, err)
-			} else {
-				t.Logf("Case %d repaired to: %s", i, result)
-			}
+			assert.NotPanics(t, func() {
+				_, _ = Repair(testCase)
+			})
 		})
 	}
 }

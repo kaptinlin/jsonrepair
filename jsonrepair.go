@@ -1,6 +1,10 @@
-// Package jsonrepair provides functionality to repair malformed JSON strings.
-// It handles JSON content commonly found in LLM outputs, JavaScript code snippets,
-// and various JSON-like formats, automatically fixing malformed documents.
+// Package jsonrepair repairs malformed JSON strings returned by LLMs,
+// JavaScript snippets, and other JSON-like sources.
+//
+// Public APIs return errors instead of panicking, and the package does not expose
+// Must* helpers. The only panic-capable paths are package initialization of
+// internal regexp.MustCompile literals, which can fail only if the package source
+// contains an invalid regular expression.
 package jsonrepair
 
 import (
