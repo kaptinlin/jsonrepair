@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-json-experiment/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -329,6 +330,7 @@ func TestShouldAddRemoveEscapeCharacters(t *testing.T) {
 	assertRepair(t, `'foo\'bar'`, `"foo'bar"`)
 	assertRepair(t, `"foo\'bar"`, `"foo'bar"`)
 	assertRepair(t, `"\a"`, `"a"`)
+	assertRepair(t, "\"first\\\nsecond\"", `"first\nsecond"`)
 }
 
 // TestShouldRepairMissingObjectValue tests repairing missing object values in JSON.
@@ -371,9 +373,12 @@ func TestShouldEscapeUnescapedDoubleQuotes(t *testing.T) {
 // TestShouldReplaceSpecialWhiteSpaceCharacters tests replacing special white space characters in JSON strings.
 func TestShouldReplaceSpecialWhiteSpaceCharacters(t *testing.T) {
 	assertRepair(t, "{\"a\":\u00a0\"foo\u00a0bar\"}", "{\"a\": \"foo\u00a0bar\"}")
-	assertRepair(t, "{\"a\":\u202F\"foo\"}", `{"a": "foo"}`)
-	assertRepair(t, "{\"a\":\u205F\"foo\"}", `{"a": "foo"}`)
+	assertRepair(t, "{\"a\":\u180e\"foo\"}", `{"a": "foo"}`)
+	assertRepair(t, "{\"a\":\u200b\"foo\"}", `{"a": "foo"}`)
+	assertRepair(t, "{\"a\":\u202f\"foo\"}", `{"a": "foo"}`)
+	assertRepair(t, "{\"a\":\u205f\"foo\"}", `{"a": "foo"}`)
 	assertRepair(t, "{\"a\":\u3000\"foo\"}", `{"a": "foo"}`)
+	assertRepair(t, "{\"a\":\ufeff\"foo\"}", `{"a": "foo"}`)
 }
 
 // TestShouldReplaceNonNormalizedLeftRightQuotes tests replacing non-normalized left/right quotes in JSON strings.
@@ -621,7 +626,13 @@ func TestShouldRepairRegularExpressions(t *testing.T) {
 // TestShouldEscapeQuotesInRepairedRegularExpressions tests XSS prevention in regex repair.
 // See https://github.com/josdejong/jsonrepair/issues/150
 func TestShouldEscapeQuotesInRepairedRegularExpressions(t *testing.T) {
-	assertRepair(t, `/foo"; console.log(-1); "/`, `"/foo\"; console.log(-1); \"/"`)
+	repaired, err := Repair(`/foo"; console.log(-1); "/`)
+	require.NoError(t, err)
+	assert.Equal(t, `"/foo\"; console.log(-1); \"/"`, repaired)
+
+	var decodedRegex string
+	require.NoError(t, json.Unmarshal([]byte(repaired), &decodedRegex))
+	assert.Equal(t, `/foo"; console.log(-1); "/`, decodedRegex)
 }
 
 // TestShouldConcatenateStrings tests concatenating strings in JSON strings.

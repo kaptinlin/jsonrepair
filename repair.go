@@ -595,7 +595,11 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 						str.WriteRune((*text)[*i+1])
 						*i += 2
 					}
-				} else if char == 'u' {
+
+					break
+				}
+
+				if char == 'u' {
 					// Handle Unicode escape sequences
 					const unicodeEscapeLen = 6
 					const hexDigits = 4
@@ -674,6 +678,13 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 							return false, newInvalidUnicodeError(msg, *i)
 						}
 					}
+
+					break
+				}
+
+				if char == codeNewline {
+					str.WriteString(`\n`)
+					*i += 2
 				} else {
 					if stopAtIndex != -1 && *i == stopAtIndex-1 && isDelimiter((*text)[stopAtIndex]) {
 						// stop before the delimiter that triggered reparsing to avoid infinite recursion

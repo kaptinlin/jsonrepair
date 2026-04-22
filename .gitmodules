@@ -1,3 +1,6 @@
 [submodule ".agents/skills"]
 	path = .agents/skills
 	url = https://github.com/agentable/golang-skills.git
+[submodule ".references/jsonrepair"]
+	path = .references/jsonrepair
+	url = https://github.com/josdejong/jsonrepair

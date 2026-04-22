@@ -108,10 +108,12 @@ func isWhitespace(c rune) bool {
 // isSpecialWhitespace checks if a rune is a special whitespace character.
 func isSpecialWhitespace(c rune) bool {
 	return c == codeNonBreakingSpace ||
-		(c >= codeEnQuad && c <= codeHairSpace) ||
+		c == codeMongolianVowelSeparator ||
+		(c >= codeEnQuad && c <= codeZeroWidthSpace) ||
 		c == codeNarrowNoBreakSpace ||
 		c == codeMediumMathematicalSpace ||
-		c == codeIdeographicSpace
+		c == codeIdeographicSpace ||
+		c == codeZeroWidthNoBreakSpace
 }
 
 // isQuote checks if a rune is a quote character.

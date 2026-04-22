@@ -33,12 +33,14 @@ const (
 	codeLowercaseE              = 0x65   // "e"
 	codeUppercaseF              = 0x46   // "F"
 	codeLowercaseF              = 0x66   // "f"
-	codeNonBreakingSpace        = 0xa0   // non-breaking space
+	codeNonBreakingSpace        = 0x00a0 // non-breaking space
+	codeMongolianVowelSeparator = 0x180e // mongolian vowel separator
 	codeEnQuad                  = 0x2000 // en quad (start of special whitespace range)
-	codeHairSpace               = 0x200a // hair space (end of special whitespace range)
+	codeZeroWidthSpace          = 0x200b // zero-width space (end of special whitespace range)
 	codeNarrowNoBreakSpace      = 0x202f // narrow no-break space
 	codeMediumMathematicalSpace = 0x205f // medium mathematical space
 	codeIdeographicSpace        = 0x3000 // ideographic space
+	codeZeroWidthNoBreakSpace   = 0xfeff // zero-width no-break space / BOM
 	codeDoubleQuoteLeft         = 0x201c // “
 	codeDoubleQuoteRight        = 0x201d // ”
 	codeQuoteLeft               = 0x2018 // ‘
