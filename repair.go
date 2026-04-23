@@ -136,12 +136,12 @@ func parseWhitespace(text *[]rune, i *int, output *strings.Builder, skipNewline 
 
 // parseComment parses both single-line (//) and multi-line (/* */) comments.
 func parseComment(text *[]rune, i *int) bool {
-	if *i+1 >= len(*text) {
+	if *i+1 >= len(*text) || (*text)[*i] != codeSlash {
 		return false
 	}
 
-	if (*text)[*i] == codeSlash && (*text)[*i+1] == codeAsterisk {
-		// Multi-line comment: skip until */
+	switch (*text)[*i+1] {
+	case codeAsterisk:
 		for *i < len(*text) && (*i+1 >= len(*text) || (*text)[*i] != codeAsterisk || (*text)[*i+1] != codeSlash) {
 			*i++
 		}
@@ -149,17 +149,14 @@ func parseComment(text *[]rune, i *int) bool {
 			*i += 2
 		}
 		return true
-	}
-
-	if (*text)[*i] == codeSlash && (*text)[*i+1] == codeSlash {
-		// Single-line comment: skip until newline
+	case codeSlash:
 		for *i < len(*text) && (*text)[*i] != codeNewline {
 			*i++
 		}
 		return true
+	default:
+		return false
 	}
-
-	return false
 }
 
 // resetOutput replaces the entire output buffer with the given string.

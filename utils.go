@@ -83,10 +83,8 @@ func isDelimiter(c rune) bool {
 
 // isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(c rune) bool {
-	if c == '{' || c == '[' || c == '_' || c == '-' || isQuote(c) {
-		return true
-	}
-	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+	return c == '{' || c == '[' || c == '_' || c == '-' || isQuote(c) ||
+		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 // isControlCharacter checks if a rune is a control character.

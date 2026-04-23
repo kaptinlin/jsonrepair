@@ -479,3 +479,58 @@ func TestSpecialQuoteCharacterHandling(t *testing.T) {
 		})
 	}
 }
+
+func TestIsStartOfValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		input rune
+		want  bool
+	}{
+		{name: "opening brace", input: '{', want: true},
+		{name: "opening bracket", input: '[', want: true},
+		{name: "underscore", input: '_', want: true},
+		{name: "minus", input: '-', want: true},
+		{name: "double quote", input: '"', want: true},
+		{name: "single quote", input: '\'', want: true},
+		{name: "lowercase letter", input: 'a', want: true},
+		{name: "uppercase letter", input: 'Z', want: true},
+		{name: "digit", input: '7', want: true},
+		{name: "space", input: ' ', want: false},
+		{name: "closing brace", input: '}', want: false},
+		{name: "colon", input: ':', want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isStartOfValue(tc.input))
+		})
+	}
+}
+
+func TestParseComment(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		start     int
+		wantOK    bool
+		wantIndex int
+	}{
+		{name: "not a comment", input: "value", start: 0, wantOK: false, wantIndex: 0},
+		{name: "slash at end", input: "/", start: 0, wantOK: false, wantIndex: 0},
+		{name: "line comment", input: "// note\nnext", start: 0, wantOK: true, wantIndex: 7},
+		{name: "block comment", input: "/* note */next", start: 0, wantOK: true, wantIndex: 10},
+		{name: "unterminated block comment", input: "/* note", start: 0, wantOK: true, wantIndex: 7},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			runes := []rune(tc.input)
+			index := tc.start
+
+			got := parseComment(&runes, &index)
+
+			assert.Equal(t, tc.wantOK, got)
+			assert.Equal(t, tc.wantIndex, index)
+		})
+	}
+}
