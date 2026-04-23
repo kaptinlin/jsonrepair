@@ -124,6 +124,7 @@ func TestIsLikelyFilePath(t *testing.T) {
 		{"http://localhost:8080/app", "HTTP localhost URL"},
 		{"ftp://ftp.example.com", "FTP URL without file path"},
 		{"mailto:user@example.com", "Email protocol URL"},
+		{"users documents node_modules", "Windows pattern words without separator"},
 	}
 
 	for _, test := range negativeTests {

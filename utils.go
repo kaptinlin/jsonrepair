@@ -416,11 +416,6 @@ func isURLPath(content string) bool {
 	return false
 }
 
-// containsPathSeparator checks if content contains valid path separators.
-func containsPathSeparator(content string) bool {
-	return strings.Contains(content, "/") || strings.Contains(content, "\\")
-}
-
 // countValidPathSegments counts meaningful path segments.
 func countValidPathSegments(content, separator string) int {
 	parts := strings.Split(content, separator)
@@ -454,15 +449,15 @@ func hasValidPathStructure(pathStr string) bool {
 		return false
 	}
 
-	// Check for path separators
-	if !containsPathSeparator(pathStr) {
-		return false
-	}
-
-	// Determine separator type
+	// Determine separator type.
 	separator := "/"
+	hasSeparator := strings.Contains(pathStr, separator)
 	if strings.Contains(pathStr, "\\") {
 		separator = "\\"
+		hasSeparator = true
+	}
+	if !hasSeparator {
+		return false
 	}
 
 	// Count meaningful segments
@@ -535,9 +530,9 @@ func hasReasonableCharacterDistribution(content string) bool {
 }
 
 // matchesWindowsPathPattern checks if content matches common Windows directory patterns.
-func matchesWindowsPathPattern(lowerContent, content string) bool {
+func matchesWindowsPathPattern(lowerContent string) bool {
 	for _, pattern := range windowsPathPatterns {
-		if strings.Contains(lowerContent, pattern) && containsPathSeparator(content) {
+		if strings.Contains(lowerContent, pattern) {
 			return true
 		}
 	}
@@ -612,16 +607,18 @@ func isLikelyFilePath(content string) bool {
 		return true
 	}
 
-	if matchesWindowsPathPattern(lowerContent, content) {
-		return true
-	}
-
-	if strings.Contains(content, "/") && matchesUnixPathPattern(lowerContent) {
-		return true
-	}
-
-	if !containsPathSeparator(content) {
+	hasForwardSlash := strings.Contains(content, "/")
+	hasBackslash := strings.Contains(content, "\\")
+	if !hasForwardSlash && !hasBackslash {
 		return false
+	}
+
+	if matchesWindowsPathPattern(lowerContent) {
+		return true
+	}
+
+	if hasForwardSlash && matchesUnixPathPattern(lowerContent) {
+		return true
 	}
 
 	if hasFileExtension(content) && hasCommonFileExtension(lowerContent) {
