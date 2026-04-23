@@ -970,7 +970,7 @@ func assertRepairFailureExact(t *testing.T, text, expectedErrMsg string, expecte
 	require.Error(t, err)
 
 	var repairErr *Error
-	require.True(t, errors.As(err, &repairErr))
+	require.ErrorAs(t, err, &repairErr)
 	assert.Equal(t, expectedErrMsg, repairErr.Message)
 	assert.Equal(t, expectedPos, repairErr.Position)
 	assert.Empty(t, result)
@@ -1193,4 +1193,18 @@ func ExampleRepair_truncated() {
 	}
 	fmt.Println(repaired)
 	// Output: {"foo":"bar"}
+}
+
+func ExampleRepair_error() {
+	_, err := Repair(`{"a":2}foo`)
+	var repairErr *Error
+	if errors.As(err, &repairErr) {
+		fmt.Println(repairErr.Message)
+		fmt.Println(repairErr.Position)
+		fmt.Println(errors.Is(err, ErrUnexpectedCharacter))
+	}
+	// Output:
+	// unexpected character "f"
+	// 7
+	// true
 }
