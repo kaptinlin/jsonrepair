@@ -3,6 +3,7 @@ package jsonrepair
 import (
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -531,32 +532,23 @@ func hasReasonableCharacterDistribution(content string) bool {
 
 // matchesWindowsPathPattern checks if content matches common Windows directory patterns.
 func matchesWindowsPathPattern(lowerContent string) bool {
-	for _, pattern := range windowsPathPatterns {
-		if strings.Contains(lowerContent, pattern) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(windowsPathPatterns, func(pattern string) bool {
+		return strings.Contains(lowerContent, pattern)
+	})
 }
 
 // matchesUnixPathPattern checks if content matches common Unix/macOS directory patterns.
 func matchesUnixPathPattern(lowerContent string) bool {
-	for _, pattern := range unixPathPatterns {
-		if strings.Contains(lowerContent, pattern) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(unixPathPatterns, func(pattern string) bool {
+		return strings.Contains(lowerContent, pattern)
+	})
 }
 
 // hasCommonFileExtension checks if content ends with a common file extension.
 func hasCommonFileExtension(lowerContent string) bool {
-	for _, ext := range commonFileExtensions {
-		if strings.HasSuffix(lowerContent, ext) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(commonFileExtensions, func(ext string) bool {
+		return strings.HasSuffix(lowerContent, ext)
+	})
 }
 
 // isExcludedURL checks if content is a URL that should be excluded from path detection.

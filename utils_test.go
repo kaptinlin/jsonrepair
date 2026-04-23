@@ -345,7 +345,28 @@ func TestJSONEscapeCharacterValidation(t *testing.T) {
 	}
 }
 
-// TestFilePathDetectionWithEscapes tests file path detection with various escape sequences
+// TestPathPatternHelpers tests path pattern helper predicates.
+func TestPathPatternHelpers(t *testing.T) {
+	tests := []struct {
+		name string
+		got  bool
+		want bool
+	}{
+		{name: "windows pattern", got: matchesWindowsPathPattern(`c:\\users\\name`), want: true},
+		{name: "no windows pattern", got: matchesWindowsPathPattern(`folder\\subfolder`), want: false},
+		{name: "unix pattern", got: matchesUnixPathPattern(`/usr/local/bin`), want: true},
+		{name: "no unix pattern", got: matchesUnixPathPattern(`relative/path`), want: false},
+		{name: "common extension", got: hasCommonFileExtension(`archive.tar.gz`), want: true},
+		{name: "uncommon extension", got: hasCommonFileExtension(`archive.customext`), want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, tc.got)
+		})
+	}
+}
+
 func TestFilePathDetectionWithEscapes(t *testing.T) {
 	testCases := []struct {
 		input    string

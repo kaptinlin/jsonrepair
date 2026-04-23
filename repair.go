@@ -230,8 +230,8 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					temp := output.String()
 					// Remove the comma we just wrote (it is guaranteed to be
 					// the last rune).
-					if strings.HasSuffix(temp, ",") {
-						temp = temp[:len(temp)-1]
+					if tempWithoutComma, ok := strings.CutSuffix(temp, ","); ok {
+						temp = tempWithoutComma
 						// Re-insert the comma before the trailing whitespace
 						temp = insertBeforeLastWhitespace(temp, ",")
 
@@ -374,7 +374,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 				outputStr := output.String()
 
 				// We look for ...",\"  (comma just before the closing quote).
-				if strings.HasSuffix(outputStr, ",\"") {
+				if outputStrWithoutCommaQuote, ok := strings.CutSuffix(outputStr, ",\""); ok {
 					// Ensure the string contains more than just that comma.
 					// The minimal string we do NOT want to alter is ",",
 					// which would look like ["\",\"]. That has length 3
@@ -384,9 +384,9 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 					// character.
 
 					// Find the position of the opening quote for this value.
-					lastQuote := strings.LastIndex(outputStr[:len(outputStr)-2], "\"")
-					if lastQuote != -1 && len(outputStr)-2-lastQuote > 2 {
-						resetOutput(output, outputStr[:len(outputStr)-2]+"\"")
+					lastQuote := strings.LastIndex(outputStrWithoutCommaQuote, "\"")
+					if lastQuote != -1 && len(outputStrWithoutCommaQuote)-lastQuote > 2 {
+						resetOutput(output, outputStrWithoutCommaQuote+"\"")
 					}
 				}
 			}

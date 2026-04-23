@@ -667,7 +667,6 @@ func TestShouldRepairMissingCommaBetweenObjectProperties(t *testing.T) {
 	assertRepair(t, "{\"a\":2\n\"b\":3\nc:4}", "{\"a\":2,\n\"b\":3,\n\"c\":4}")
 	assertRepair(t, "{\n  \"firstName\": \"John\"\n  lastName: Smith", "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\"}")
 	assertRepair(t, "{\n  \"firstName\": \"John\" /* comment */ \n  lastName: Smith", "{\n  \"firstName\": \"John\",  \n  \"lastName\": \"Smith\"}")
-
 	// verify parsing a comma after a return (since in parseString we stop at a return)
 	assertRepair(t, "{\n  \"firstName\": \"John\"\n  ,  lastName: Smith", "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\"}")
 }
