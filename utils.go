@@ -482,24 +482,8 @@ func hasValidPathStructure(pathStr string) bool {
 
 	// Special cases for known path patterns
 	lowerPath := strings.ToLower(pathStr)
-
-	// Windows common directories - reuse package-level patterns
-	for _, pattern := range windowsPathPatterns {
-		if strings.Contains(lowerPath, pattern) {
-			return true
-		}
-	}
-
-	// Unix system directories
-	if strings.HasPrefix(pathStr, "/") {
-		for _, dir := range unixPathPatterns {
-			if strings.Contains(lowerPath, dir) {
-				return true
-			}
-		}
-	}
-
-	return false
+	return matchesWindowsPathPattern(lowerPath) ||
+		strings.HasPrefix(pathStr, "/") && matchesUnixPathPattern(lowerPath)
 }
 
 // isValidPathCharacter checks if a character is valid in file paths.
@@ -675,14 +659,5 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 
 	content := contentBuilder.String()
 
-	// Pre-validation checks
-	if len(content) < 3 {
-		return false
-	}
-
-	if !hasPathSeparator {
-		return false
-	}
-
-	return isLikelyFilePath(content)
+	return hasPathSeparator && len(content) >= 3 && isLikelyFilePath(content)
 }
