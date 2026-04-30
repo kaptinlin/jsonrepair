@@ -417,10 +417,9 @@ func isURLPath(content string) bool {
 
 // countValidPathSegments counts meaningful path segments.
 func countValidPathSegments(content, separator string) int {
-	parts := strings.Split(content, separator)
 	count := 0
 
-	for _, part := range parts {
+	for part := range strings.SplitSeq(content, separator) {
 		part = strings.TrimSpace(part)
 		if len(part) > 0 && part != "." && part != ".." {
 			count++
