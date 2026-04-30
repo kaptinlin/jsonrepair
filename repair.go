@@ -963,45 +963,47 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 
 // parseRegex parses a regex literal like /pattern/flags and wraps it in quotes.
 func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
-	if *i < len(*text) && (*text)[*i] == codeSlash {
-		start := *i
-		*i++
-
-		for *i < len(*text) && ((*text)[*i] != codeSlash || (*text)[*i-1] == codeBackslash) {
-			*i++
-		}
-
-		if *i < len(*text) && (*text)[*i] == codeSlash {
-			*i++
-		}
-
-		// json.Marshal properly escapes quotes, backslashes, and other special
-		// characters in the regex content, preventing XSS when repaired JSON is
-		// parsed with eval. See josdejong/jsonrepair#150.
-		// json.Marshal cannot fail for a valid UTF-8 string derived from runes.
-		regexContent := string((*text)[start:*i])
-		jsonBytes, _ := json.Marshal(regexContent)
-		output.Write(jsonBytes)
-		return true
+	if *i >= len(*text) || (*text)[*i] != codeSlash {
+		return false
 	}
-	return false
+
+	start := *i
+	*i++
+
+	for *i < len(*text) && ((*text)[*i] != codeSlash || (*text)[*i-1] == codeBackslash) {
+		*i++
+	}
+
+	if *i < len(*text) && (*text)[*i] == codeSlash {
+		*i++
+	}
+
+	// json.Marshal properly escapes quotes, backslashes, and other special
+	// characters in the regex content, preventing XSS when repaired JSON is
+	// parsed with eval. See josdejong/jsonrepair#150.
+	// json.Marshal cannot fail for a valid UTF-8 string derived from runes.
+	regexContent := string((*text)[start:*i])
+	jsonBytes, _ := json.Marshal(regexContent)
+	output.Write(jsonBytes)
+	return true
 }
 
 // parseMarkdownCodeBlock parses and skips Markdown fenced code blocks like ``` or ```json.
 func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strings.Builder) bool {
-	if skipMarkdownCodeBlock(text, i, blocks, output) {
-		if *i < len(*text) && isFunctionNameCharStart((*text)[*i]) {
-			// Strip the optional language specifier like "json"
-			for *i < len(*text) && isFunctionNameChar((*text)[*i]) {
-				*i++
-			}
-		}
-
-		parseWhitespace(text, i, output, true)
-
-		return true
+	if !skipMarkdownCodeBlock(text, i, blocks, output) {
+		return false
 	}
-	return false
+
+	if *i < len(*text) && isFunctionNameCharStart((*text)[*i]) {
+		// Strip the optional language specifier like "json"
+		for *i < len(*text) && isFunctionNameChar((*text)[*i]) {
+			*i++
+		}
+	}
+
+	parseWhitespace(text, i, output, true)
+
+	return true
 }
 
 // skipMarkdownCodeBlock checks if we're at a Markdown code block marker and skips it.

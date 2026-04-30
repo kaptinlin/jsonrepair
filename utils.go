@@ -57,14 +57,12 @@ func insertBeforeLastWhitespace(s, text string) string {
 	return s[:index+1] + text + s[index+1:]
 }
 
-// isHex checks if a rune is a hexadecimal digit.
 func isHex(c rune) bool {
 	return (c >= codeZero && c <= codeNine) ||
 		(c >= codeUppercaseA && c <= codeUppercaseF) ||
 		(c >= codeLowercaseA && c <= codeLowercaseF)
 }
 
-// isDigit checks if a rune is a digit.
 func isDigit(c rune) bool {
 	return c >= codeZero && c <= codeNine
 }
@@ -75,19 +73,16 @@ func isValidStringCharacter(c rune) bool {
 	return c >= 0x0020
 }
 
-// isDelimiter checks if a character is a delimiter.
 func isDelimiter(c rune) bool {
 	return c == ',' || c == ':' || c == '[' || c == ']' || c == '/' ||
 		c == '{' || c == '}' || c == '(' || c == ')' || c == '\n' || c == '+'
 }
 
-// isStartOfValue checks if a rune is the start of a JSON value.
 func isStartOfValue(c rune) bool {
 	return c == '{' || c == '[' || c == '_' || c == '-' || isQuote(c) ||
 		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
-// isControlCharacter checks if a rune is a control character.
 func isControlCharacter(c rune) bool {
 	return c == codeNewline ||
 		c == codeReturn ||
@@ -96,7 +91,6 @@ func isControlCharacter(c rune) bool {
 		c == codeFormFeed
 }
 
-// isWhitespace checks if a rune is a whitespace character.
 func isWhitespace(c rune) bool {
 	return c == codeSpace ||
 		c == codeNewline ||
@@ -115,7 +109,6 @@ func isSpecialWhitespace(c rune) bool {
 		c == codeZeroWidthNoBreakSpace
 }
 
-// isQuote checks if a rune is a quote character.
 func isQuote(c rune) bool {
 	return isDoubleQuoteLike(c) || isSingleQuoteLike(c)
 }
@@ -127,7 +120,6 @@ func isDoubleQuoteLike(c rune) bool {
 		c == codeDoubleQuoteRight
 }
 
-// isDoubleQuote checks if a rune is a double quote.
 func isDoubleQuote(c rune) bool {
 	return c == codeDoubleQuote
 }
@@ -141,7 +133,6 @@ func isSingleQuoteLike(c rune) bool {
 		c == codeAcuteAccent
 }
 
-// isSingleQuote checks if a rune is a single quote.
 func isSingleQuote(c rune) bool {
 	return c == codeQuote
 }
@@ -178,12 +169,10 @@ func endsWithCommaOrNewline(text string) bool {
 	return true
 }
 
-// isFunctionNameCharStart checks if a rune is a valid function name start character.
 func isFunctionNameCharStart(c rune) bool {
 	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$'
 }
 
-// isFunctionNameChar checks if a rune is a valid function name character.
 func isFunctionNameChar(c rune) bool {
 	return isFunctionNameCharStart(c) || isDigit(c)
 }
@@ -196,7 +185,6 @@ func isUnquotedStringDelimiter(c rune) bool {
 		c == '{' || c == '}' || c == '\n' || c == '+'
 }
 
-// isWhitespaceExceptNewline checks if a rune is whitespace excluding newline.
 func isWhitespaceExceptNewline(c rune) bool {
 	return c == codeSpace || c == codeTab || c == codeReturn
 }
@@ -204,7 +192,6 @@ func isWhitespaceExceptNewline(c rune) bool {
 // regexURLStart matches URL protocol prefixes.
 var regexURLStart = regexp.MustCompile(`^(https?|ftp|mailto|file|data|irc)://`)
 
-// isURLChar checks if a rune is a valid URL character.
 func isURLChar(c rune) bool {
 	if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') {
 		return true
@@ -359,17 +346,14 @@ func isBase64String(content string) bool {
 	return base64Re.MatchString(content)
 }
 
-// hasURLEncoding checks if content contains URL encoding patterns.
 func hasURLEncoding(content string) bool {
 	return urlEncodingRe.MatchString(content)
 }
 
-// isWindowsAbsolutePath checks for Windows absolute paths (drive letter format).
 func isWindowsAbsolutePath(content string) bool {
 	return driveLetterRe.MatchString(content) || containsDriveRe.MatchString(content)
 }
 
-// isUNCPath checks for UNC (Universal Naming Convention) paths.
 func isUNCPath(content string) bool {
 	if !strings.HasPrefix(content, `\\`) || strings.HasPrefix(content, `\\\\`) {
 		return false
@@ -390,33 +374,27 @@ func isUNCPath(content string) bool {
 	return false
 }
 
-// isUnixAbsolutePath checks for Unix absolute paths.
 func isUnixAbsolutePath(content string) bool {
 	return strings.HasPrefix(content, "/") || strings.HasPrefix(content, "~/")
 }
 
-// isURLPath checks for URL-style file paths.
 func isURLPath(content string) bool {
 	lowerContent := strings.ToLower(content)
 
-	// Exclude HTTP/HTTPS URLs
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return false
 	}
 
-	// File protocol
-	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "file://"); ok {
+	for _, prefix := range []string{"file://", "smb://"} {
+		lowerPathPart, ok := strings.CutPrefix(lowerContent, prefix)
+		if !ok {
+			continue
+		}
+
 		pathPart := content[len(content)-len(lowerPathPart):]
 		return len(pathPart) > 1 && hasValidPathStructure(pathPart)
 	}
 
-	// SMB/CIFS protocol
-	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "smb://"); ok {
-		pathPart := content[len(content)-len(lowerPathPart):]
-		return len(pathPart) > 1 && hasValidPathStructure(pathPart)
-	}
-
-	// FTP with file path
 	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "ftp://"); ok {
 		pathPart := content[len(content)-len(lowerPathPart):]
 		if slashIndex := strings.Index(lowerPathPart, "/"); slashIndex > 0 {
