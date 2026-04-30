@@ -3,21 +3,26 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 
 	"github.com/kaptinlin/jsonrepair"
 )
 
 func main() {
-	// The following is invalid JSON: it consists of JSON contents copied from
-	// a JavaScript code base, where the keys are missing double quotes,
-	// and strings are using single quotes:
 	input := "{name: 'John'}"
-
-	repaired, err := jsonrepair.Repair(input)
-	if err != nil {
+	if err := run(os.Stdout, input); err != nil {
 		log.Fatalf("Failed to repair JSON: %v", err)
 	}
+}
 
-	fmt.Println(repaired) // Output: {"name": "John"}
+func run(w io.Writer, input string) error {
+	repaired, err := jsonrepair.Repair(input)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(w, repaired)
+	return err
 }

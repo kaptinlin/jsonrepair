@@ -1196,8 +1196,7 @@ func ExampleRepair_truncated() {
 
 func ExampleRepair_error() {
 	_, err := Repair(`{"a":2}foo`)
-	var repairErr *Error
-	if errors.As(err, &repairErr) {
+	if repairErr, ok := errors.AsType[*Error](err); ok {
 		fmt.Println(repairErr.Message)
 		fmt.Println(repairErr.Position)
 		fmt.Println(errors.Is(err, ErrUnexpectedCharacter))
