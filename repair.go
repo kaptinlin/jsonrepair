@@ -997,15 +997,7 @@ func parseMarkdownCodeBlock(text *[]rune, i *int, blocks []string, output *strin
 			}
 		}
 
-		// Add any whitespace after code block marker to output
-		for *i < len(*text) && (isWhitespace((*text)[*i]) || isSpecialWhitespace((*text)[*i])) {
-			if isWhitespace((*text)[*i]) {
-				output.WriteRune((*text)[*i])
-			} else {
-				output.WriteRune(' ') // repair special whitespace
-			}
-			*i++
-		}
+		parseWhitespace(text, i, output, true)
 
 		return true
 	}

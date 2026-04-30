@@ -748,6 +748,7 @@ func TestShouldStripMarkdownFencedCodeBlocks(t *testing.T) {
 	assertRepair(t, "```{\"a\":\"b\"}```", "{\"a\":\"b\"}")
 	assertRepair(t, "```\n[1,2,3]\n```", "\n[1,2,3]\n")
 	assertRepair(t, "```python\n{\"a\":\"b\"}\n```", "\n{\"a\":\"b\"}\n")
+	assertRepair(t, "```json\u00a0\n{\"a\":\"b\"}\n```", " \n{\"a\":\"b\"}\n")
 	assertRepair(t, "\n ```json\n{\"a\":\"b\"}\n```\n  ", "\n \n{\"a\":\"b\"}\n\n  ")
 }
 
