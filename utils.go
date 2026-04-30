@@ -374,8 +374,20 @@ func isUNCPath(content string) bool {
 	if !strings.HasPrefix(content, `\\`) || strings.HasPrefix(content, `\\\\`) {
 		return false
 	}
-	parts := strings.Split(content, `\`)
-	return len(parts) >= 4 && len(parts[2]) > 0 && len(parts[3]) > 0
+
+	partIndex := 0
+	for part := range strings.SplitSeq(content, `\`) {
+		switch partIndex {
+		case 2:
+			if len(part) == 0 {
+				return false
+			}
+		case 3:
+			return len(part) > 0
+		}
+		partIndex++
+	}
+	return false
 }
 
 // isUnixAbsolutePath checks for Unix absolute paths.

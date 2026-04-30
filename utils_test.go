@@ -41,6 +41,27 @@ func TestInsertBeforeLastWhitespace(t *testing.T) {
 	}
 }
 
+func TestIsUNCPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{name: "server and share", input: `\\server\share`, expected: true},
+		{name: "server share and file", input: `\\server\share\file.txt`, expected: true},
+		{name: "missing share", input: `\\server\`, expected: false},
+		{name: "missing server", input: `\\\share`, expected: false},
+		{name: "escaped leading slashes", input: `\\\\server\share`, expected: false},
+		{name: "not unc", input: `\server\share`, expected: false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, isUNCPath(test.input))
+		})
+	}
+}
+
 // TestIsLikelyFilePath tests the improved file path detection function.
 func TestIsLikelyFilePath(t *testing.T) {
 	// Test cases that should be detected as file paths
