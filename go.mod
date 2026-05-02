@@ -3,7 +3,7 @@ module github.com/kaptinlin/jsonrepair
 go 1.26.2
 
 require (
-	github.com/go-json-experiment/json v0.0.0-20260214004413-d219187c3433
+	github.com/go-json-experiment/json v0.0.0-20260430182902-b6187a392ed4
 	github.com/stretchr/testify v1.11.1
 )
 
