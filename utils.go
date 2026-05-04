@@ -437,39 +437,26 @@ func hasValidPathStructure(pathStr string) bool {
 		return false
 	}
 
-	// Determine separator type.
 	separator := "/"
-	hasSeparator := strings.Contains(pathStr, separator)
 	if strings.Contains(pathStr, "\\") {
 		separator = "\\"
-		hasSeparator = true
-	}
-	if !hasSeparator {
+	} else if !strings.Contains(pathStr, separator) {
 		return false
 	}
 
-	// Count meaningful segments
 	meaningfulParts := countValidPathSegments(pathStr, separator)
 	if meaningfulParts < 2 {
 		return false
 	}
 
-	// Check for file extension (optional but helpful)
-	hasExt := hasFileExtension(pathStr)
-
-	// More lenient requirements:
-	// - If has extension, accept with 2+ parts
-	// - If no extension, require 3+ parts OR known path patterns
-	if hasExt {
+	if hasFileExtension(pathStr) {
 		return true
 	}
 
-	// For paths without extensions, be more lenient
 	if meaningfulParts >= 3 {
 		return true
 	}
 
-	// Special cases for known path patterns
 	lowerPath := strings.ToLower(pathStr)
 	return matchesWindowsPathPattern(lowerPath) ||
 		strings.HasPrefix(pathStr, "/") && matchesUnixPathPattern(lowerPath)
