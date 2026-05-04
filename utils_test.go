@@ -219,6 +219,50 @@ func TestAnalyzePotentialFilePath(t *testing.T) {
 	}
 }
 
+func TestCutProtocolPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		content string
+		prefix  string
+		want    string
+		wantOK  bool
+	}{
+		{
+			name:    "mixed case file prefix",
+			content: "FiLe:///Users/Shared/Report.PDF",
+			prefix:  "file://",
+			want:    "/Users/Shared/Report.PDF",
+			wantOK:  true,
+		},
+		{
+			name:    "unicode suffix keeps original bytes",
+			content: "FTP://example.com/Ångström/report.pdf",
+			prefix:  "ftp://",
+			want:    "example.com/Ångström/report.pdf",
+			wantOK:  true,
+		},
+		{
+			name:    "missing prefix",
+			content: "https://example.com/api",
+			prefix:  "ftp://",
+			want:    "",
+			wantOK:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, ok := cutProtocolPath(tc.content, strings.ToLower(tc.content), tc.prefix)
+			assert.Equal(t, tc.wantOK, ok)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 // TestIsURLPath tests the URL-style file path detection function.
 func TestIsURLPath(t *testing.T) {
 	t.Parallel()

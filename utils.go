@@ -378,6 +378,13 @@ func isUnixAbsolutePath(content string) bool {
 	return strings.HasPrefix(content, "/") || strings.HasPrefix(content, "~/")
 }
 
+func cutProtocolPath(content, lowerContent, prefix string) (string, bool) {
+	if _, ok := strings.CutPrefix(lowerContent, prefix); !ok {
+		return "", false
+	}
+	return content[len(prefix):], true
+}
+
 func isURLPath(content string) bool {
 	lowerContent := strings.ToLower(content)
 
@@ -386,19 +393,17 @@ func isURLPath(content string) bool {
 	}
 
 	for _, prefix := range []string{"file://", "smb://"} {
-		lowerPathPart, ok := strings.CutPrefix(lowerContent, prefix)
+		pathPart, ok := cutProtocolPath(content, lowerContent, prefix)
 		if !ok {
 			continue
 		}
 
-		pathPart := content[len(content)-len(lowerPathPart):]
 		return len(pathPart) > 1 && hasValidPathStructure(pathPart)
 	}
 
-	if lowerPathPart, ok := strings.CutPrefix(lowerContent, "ftp://"); ok {
-		pathPart := content[len(content)-len(lowerPathPart):]
-		if slashIndex := strings.Index(lowerPathPart, "/"); slashIndex > 0 {
-			return hasValidPathStructure(pathPart[slashIndex:])
+	if ftpPath, ok := cutProtocolPath(content, lowerContent, "ftp://"); ok {
+		if slashIndex := strings.Index(ftpPath, "/"); slashIndex > 0 {
+			return hasValidPathStructure(ftpPath[slashIndex:])
 		}
 	}
 
@@ -514,8 +519,7 @@ func isExcludedURL(lowerContent, content string) bool {
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return true
 	}
-	if lowerFTPPath, ok := strings.CutPrefix(lowerContent, "ftp://"); ok {
-		ftpPath := content[len(content)-len(lowerFTPPath):]
+	if ftpPath, ok := cutProtocolPath(content, lowerContent, "ftp://"); ok {
 		return !strings.Contains(ftpPath, "/")
 	}
 	return false
