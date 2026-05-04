@@ -13,6 +13,8 @@ import (
 
 // TestParseFullJSONObject tests parsing a full JSON object.
 func TestParseFullJSONObject(t *testing.T) {
+	t.Parallel()
+
 	text := `{"a":2.3e100,"b":"str","c":null,"d":false,"e":[1,2,3]}`
 	parsed, err := Repair(text)
 	require.NoError(t, err)
@@ -21,11 +23,15 @@ func TestParseFullJSONObject(t *testing.T) {
 
 // TestParseWhitespace tests parsing JSON with whitespace.
 func TestParseWhitespace(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, "  { \n } \t ")
 }
 
 // TestParseObject tests parsing JSON objects.
 func TestParseObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, "{}")
 	assertRepairEqual(t, "{  }")
 	assertRepairEqual(t, `{"a": {}}`)
@@ -35,6 +41,8 @@ func TestParseObject(t *testing.T) {
 
 // TestParseArray tests parsing JSON arrays.
 func TestParseArray(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, "[]")
 	assertRepairEqual(t, "[  ]")
 	assertRepairEqual(t, "[1,2,3]")
@@ -47,6 +55,8 @@ func TestParseArray(t *testing.T) {
 
 // TestParseNumber tests parsing JSON numbers.
 func TestParseNumber(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, "23")
 	assertRepairEqual(t, "0")
 	assertRepairEqual(t, "0e+2")
@@ -63,6 +73,8 @@ func TestParseNumber(t *testing.T) {
 
 // TestParseString tests parsing JSON strings.
 func TestParseString(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `"str"`)
 	assertRepairEqual(t, "\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"")
 	assertRepairEqual(t, `"\\u260E"`)
@@ -70,6 +82,8 @@ func TestParseString(t *testing.T) {
 
 // TestParseKeywords tests parsing JSON keywords.
 func TestParseKeywords(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, "true")
 	assertRepairEqual(t, "false")
 	assertRepairEqual(t, "null")
@@ -77,6 +91,8 @@ func TestParseKeywords(t *testing.T) {
 
 // TestCorrectlyHandleStringsEqualingDelimiter tests handling strings that equal a JSON delimiter.
 func TestCorrectlyHandleStringsEqualingDelimiter(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `""`)
 	assertRepairEqual(t, `"["`)
 	assertRepairEqual(t, `"]"`)
@@ -88,6 +104,8 @@ func TestCorrectlyHandleStringsEqualingDelimiter(t *testing.T) {
 
 // TestSupportsUnicodeCharactersInString tests parsing strings with Unicode characters.
 func TestSupportsUnicodeCharactersInString(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `"★"`)
 	assertRepairEqual(t, `"\u2605"`)
 	assertRepairEqual(t, `"😀"`)
@@ -97,6 +115,8 @@ func TestSupportsUnicodeCharactersInString(t *testing.T) {
 
 // TestSupportsEscapedUnicodeCharactersInString tests parsing strings with escaped Unicode characters.
 func TestSupportsEscapedUnicodeCharactersInString(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `"\\u2605"`)
 	assertRepairEqual(t, `"\\u2605A"`)
 	assertRepairEqual(t, `"\\ud83d\\ude00"`)
@@ -105,6 +125,8 @@ func TestSupportsEscapedUnicodeCharactersInString(t *testing.T) {
 
 // TestSupportsUnicodeCharactersInKey tests parsing JSON objects with Unicode characters in keys.
 func TestSupportsUnicodeCharactersInKey(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `{"★":true}`)
 	assertRepairEqual(t, `{"\u2605":true}`)
 	assertRepairEqual(t, `{"😀":true}`)
@@ -113,6 +135,8 @@ func TestSupportsUnicodeCharactersInKey(t *testing.T) {
 
 // TestShouldRepairUnquotedUrl tests repairing unquoted URLs.
 func TestShouldRepairUnquotedUrl(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `https://www.example.com/`, `"https://www.example.com/"`)
 	assertRepair(t, `{url:https://www.example.com/}`, `{"url":"https://www.example.com/"}`)
 	assertRepair(t, `{url:https://www.example.com/,"id":2}`, `{"url":"https://www.example.com/","id":2}`)
@@ -122,6 +146,8 @@ func TestShouldRepairUnquotedUrl(t *testing.T) {
 
 // TestShouldRepairUrlWithMissingEndQuote tests repairing URLs with missing end quotes.
 func TestShouldRepairUrlWithMissingEndQuote(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"https://www.example.com/`, `"https://www.example.com/"`)
 	assertRepair(t, `{"url":"https://www.example.com/}`, `{"url":"https://www.example.com/"}`)
 	assertRepair(t, `{"url":"https://www.example.com/,"id":2}`, `{"url":"https://www.example.com/","id":2}`)
@@ -131,6 +157,8 @@ func TestShouldRepairUrlWithMissingEndQuote(t *testing.T) {
 
 // TestShouldRepairMissingEndQuoteAdvanced tests advanced cases of missing end quotes.
 func TestShouldRepairMissingEndQuoteAdvanced(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"12:20`, `"12:20"`)
 	assertRepair(t, `{"time":"12:20}`, `{"time":"12:20"}`)
 	assertRepair(t, `{"date":2024-10-18T18:35:22.229Z}`, `{"date":"2024-10-18T18:35:22.229Z"}`)
@@ -141,6 +169,8 @@ func TestShouldRepairMissingEndQuoteAdvanced(t *testing.T) {
 }
 
 func TestShouldRepairLongTruncatedURL(t *testing.T) {
+	t.Parallel()
+
 	pad := strings.Repeat("a", 23)
 	input := fmt.Sprintf("[\"%shttps:/", pad)
 	expected := fmt.Sprintf("[\"%shttps:\",\"/\"]", pad)
@@ -149,6 +179,8 @@ func TestShouldRepairLongTruncatedURL(t *testing.T) {
 
 // TestShouldRepairStringWithCommas tests strings containing commas that need special handling.
 func TestShouldRepairStringWithCommas(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a":"b}`, `{"a":"b"}`)
 	assertRepair(t, `{"a":"b,"c":"d"}`, `{"a":"b","c":"d"}`)
 
@@ -158,6 +190,8 @@ func TestShouldRepairStringWithCommas(t *testing.T) {
 
 // TestShouldRepairComplexStringCases tests advanced string parsing scenarios.
 func TestShouldRepairComplexStringCases(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"text":"Hello, world,"next":"value"}`, `{"text":"Hello, world","next":"value"}`)
 	assertRepair(t, `{"a":"b,c,d,"e":"f"}`, `{"a":"b,c,d","e":"f"}`)
 	assertRepair(t, `[1,"hello,world,"2]`, `[1,"hello,world",2]`)
@@ -165,11 +199,15 @@ func TestShouldRepairComplexStringCases(t *testing.T) {
 
 // TestShouldRepairEscapedCommaBeforeDelimiter tests repairing escaped commas before delimiters.
 func TestShouldRepairEscapedCommaBeforeDelimiter(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "\"foo\\,\"x", "[\n\"foo\",\"x\"\n]")
 }
 
 // TestShouldParseUnquotedString tests parsing unquoted strings.
 func TestShouldParseUnquotedString(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `hello world`, `"hello world"`)
 	assertRepair(t, `She said: no way`, `"She said: no way"`)
 	assertRepair(t, `["This is C(2)", "This is F(3)]`, `["This is C(2)", "This is F(3)"]`)
@@ -177,6 +215,8 @@ func TestShouldParseUnquotedString(t *testing.T) {
 }
 
 func TestParseUnquotedStringWithModeValueParsesURLs(t *testing.T) {
+	t.Parallel()
+
 	text := []rune(`https://www.example.com/path?q=1`)
 	var output strings.Builder
 	index := 0
@@ -190,6 +230,8 @@ func TestParseUnquotedStringWithModeValueParsesURLs(t *testing.T) {
 
 // TestShouldAddMissingQuotes tests repairing missing quotes in JSON.
 func TestShouldAddMissingQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `abc`, `"abc"`)
 	assertRepair(t, `hello   world`, `"hello   world"`)
 	assertRepair(t, "{\nmessage: hello world\n}", "{\n\"message\": \"hello world\"\n}")
@@ -204,6 +246,8 @@ func TestShouldAddMissingQuotes(t *testing.T) {
 
 // TestShouldAddMissingEndQuote tests repairing missing end quotes in JSON.
 func TestShouldAddMissingEndQuote(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"abc`, `"abc"`)
 	assertRepair(t, `'abc`, `"abc"`)
 	assertRepair(t, "\u2018abc", `"abc"`)
@@ -215,6 +259,8 @@ func TestShouldAddMissingEndQuote(t *testing.T) {
 
 // TestShouldRepairTruncatedJSON tests repairing truncated JSON.
 func TestShouldRepairTruncatedJSON(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"foo`, `"foo"`)
 	assertRepair(t, `[`, `[]`)
 	assertRepair(t, `["foo`, `["foo"]`)
@@ -243,6 +289,8 @@ func TestShouldRepairTruncatedJSON(t *testing.T) {
 
 // TestShouldRepairEllipsisInArray tests repairing ellipses in JSON arrays.
 func TestShouldRepairEllipsisInArray(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `[1,2,3,...]`, `[1,2,3]`)
 	assertRepair(t, `[1, 2, 3, ... ]`, `[1, 2, 3  ]`)
 	assertRepair(t, `[1,2,3,/*comment1*/.../*comment2*/]`, `[1,2,3]`)
@@ -257,6 +305,8 @@ func TestShouldRepairEllipsisInArray(t *testing.T) {
 
 // TestShouldRepairEllipsisInObject tests repairing ellipses in JSON objects.
 func TestShouldRepairEllipsisInObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a":2,"b":3,...}`, `{"a":2,"b":3}`)
 	assertRepair(t, `{"a":2,"b":3,/*comment1*/.../*comment2*/}`, `{"a":2,"b":3}`)
 	assertRepair(t, "{\n  \"a\":2,\n  \"b\":3,\n  /*comment1*/.../*comment2*/\n}", "{\n  \"a\":2,\n  \"b\":3\n  \n}")
@@ -270,6 +320,8 @@ func TestShouldRepairEllipsisInObject(t *testing.T) {
 
 // TestShouldAddMissingStartQuote tests repairing missing start quotes in JSON.
 func TestShouldAddMissingStartQuote(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `abc"`, `"abc"`)
 	assertRepair(t, `[a","b"]`, `["a","b"]`)
 	assertRepair(t, `[a",b"]`, `["a","b"]`)
@@ -281,6 +333,8 @@ func TestShouldAddMissingStartQuote(t *testing.T) {
 
 // TestShouldStopAtFirstNextReturnWhenMissingEndQuote tests stopping at the next return when missing an end quote.
 func TestShouldStopAtFirstNextReturnWhenMissingEndQuote(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "[\n\"abc,\n\"def\"\n]", "[\n\"abc\",\n\"def\"\n]")
 	assertRepair(t, "[\n\"abc,  \n\"def\"\n]", "[\n\"abc\",  \n\"def\"\n]")
 	assertRepair(t, "[\"abc]\n", "[\"abc\"]\n")
@@ -290,6 +344,8 @@ func TestShouldStopAtFirstNextReturnWhenMissingEndQuote(t *testing.T) {
 
 // TestShouldReplaceSingleQuotesWithDoubleQuotes tests replacing single quotes with double quotes in JSON.
 func TestShouldReplaceSingleQuotesWithDoubleQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{'a':2}", "{\"a\":2}")
 	assertRepair(t, "{'a':'foo'}", "{\"a\":\"foo\"}")
 	assertRepair(t, "{\"a\":'foo'}", "{\"a\":\"foo\"}")
@@ -298,6 +354,8 @@ func TestShouldReplaceSingleQuotesWithDoubleQuotes(t *testing.T) {
 
 // TestShouldReplaceSpecialQuotesWithDoubleQuotes tests replacing special quotes with double quotes in JSON.
 func TestShouldReplaceSpecialQuotesWithDoubleQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{“a”:“b”}", "{\"a\":\"b\"}")
 	assertRepair(t, "{‘a’:‘b’}", "{\"a\":\"b\"}")
 	assertRepair(t, "{`a´:`b´}", "{\"a\":\"b\"}")
@@ -305,6 +363,8 @@ func TestShouldReplaceSpecialQuotesWithDoubleQuotes(t *testing.T) {
 
 // TestShouldNotReplaceSpecialQuotesInsideNormalString tests not replacing special quotes inside a normal string.
 func TestShouldNotReplaceSpecialQuotesInsideNormalString(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "\"Rounded “ quote\"", "\"Rounded “ quote\"")
 	assertRepair(t, "'Rounded “ quote'", "\"Rounded “ quote\"")
 	assertRepair(t, "\"Rounded ’ quote\"", "\"Rounded ’ quote\"")
@@ -314,16 +374,22 @@ func TestShouldNotReplaceSpecialQuotesInsideNormalString(t *testing.T) {
 
 // TestShouldNotCrashWhenRepairingQuotes tests not crashing when repairing quotes in JSON.
 func TestShouldNotCrashWhenRepairingQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{pattern: '’'}", "{\"pattern\": \"’\"}")
 }
 
 // TestShouldLeaveStringContentUntouched tests leaving string content untouched in JSON.
 func TestShouldLeaveStringContentUntouched(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `"{a:b}"`)
 }
 
 // TestShouldAddRemoveEscapeCharacters tests adding and removing escape characters in JSON strings.
 func TestShouldAddRemoveEscapeCharacters(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"foo'bar"`, `"foo'bar"`)
 	assertRepair(t, `"foo\"bar"`, `"foo\"bar"`)
 	assertRepair(t, `'foo"bar'`, `"foo\"bar"`)
@@ -335,6 +401,8 @@ func TestShouldAddRemoveEscapeCharacters(t *testing.T) {
 
 // TestShouldRepairMissingObjectValue tests repairing missing object values in JSON.
 func TestShouldRepairMissingObjectValue(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a":}`, `{"a":null}`)
 	assertRepair(t, `{"a":,"b":2}`, `{"a":null,"b":2}`)
 	assertRepair(t, `{"a":`, `{"a":null}`)
@@ -342,6 +410,8 @@ func TestShouldRepairMissingObjectValue(t *testing.T) {
 
 // TestShouldRepairUndefinedValues tests repairing undefined values in JSON.
 func TestShouldRepairUndefinedValues(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a":undefined}`, `{"a":null}`)
 	assertRepair(t, `[undefined]`, `[null]`)
 	assertRepair(t, `undefined`, `null`)
@@ -349,6 +419,8 @@ func TestShouldRepairUndefinedValues(t *testing.T) {
 
 // TestShouldEscapeUnescapedControlCharacters tests escaping unescaped control characters in JSON strings.
 func TestShouldEscapeUnescapedControlCharacters(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "\"hello\bworld\"", `"hello\bworld"`)
 	assertRepair(t, "\"hello\fworld\"", `"hello\fworld"`)
 	assertRepair(t, "\"hello\nworld\"", `"hello\nworld"`)
@@ -362,6 +434,8 @@ func TestShouldEscapeUnescapedControlCharacters(t *testing.T) {
 
 // TestShouldEscapeUnescapedDoubleQuotes tests escaping unescaped double quotes in JSON strings.
 func TestShouldEscapeUnescapedDoubleQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"The TV has a 24" screen"`, `"The TV has a 24\" screen"`)
 	assertRepair(t, `{"key": "apple "bee" carrot"}`, `{"key": "apple \"bee\" carrot"}`)
 	assertRepairEqual(t, `[",",":"]`)
@@ -372,6 +446,8 @@ func TestShouldEscapeUnescapedDoubleQuotes(t *testing.T) {
 
 // TestShouldReplaceSpecialWhiteSpaceCharacters tests replacing special white space characters in JSON strings.
 func TestShouldReplaceSpecialWhiteSpaceCharacters(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{\"a\":\u00a0\"foo\u00a0bar\"}", "{\"a\": \"foo\u00a0bar\"}")
 	assertRepair(t, "{\"a\":\u180e\"foo\"}", `{"a": "foo"}`)
 	assertRepair(t, "{\"a\":\u200b\"foo\"}", `{"a": "foo"}`)
@@ -383,6 +459,8 @@ func TestShouldReplaceSpecialWhiteSpaceCharacters(t *testing.T) {
 
 // TestShouldReplaceNonNormalizedLeftRightQuotes tests replacing non-normalized left/right quotes in JSON strings.
 func TestShouldReplaceNonNormalizedLeftRightQuotes(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "\u2018foo\u2019", `"foo"`)
 	assertRepair(t, "\u201Cfoo\u201D", `"foo"`)
 	assertRepair(t, "\u0060foo\u00B4", `"foo"`)
@@ -392,6 +470,8 @@ func TestShouldReplaceNonNormalizedLeftRightQuotes(t *testing.T) {
 
 // TestShouldRemoveBlockComments tests removing block comments from JSON strings.
 func TestShouldRemoveBlockComments(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "/* foo */ {}", " {}")
 	assertRepair(t, "{} /* foo */ ", "{}  ")
 	assertRepair(t, "{} /* foo ", "{} ")
@@ -402,17 +482,23 @@ func TestShouldRemoveBlockComments(t *testing.T) {
 
 // TestShouldRemoveLineComments tests removing line comments in JSON.
 func TestShouldRemoveLineComments(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{} // comment", "{} ")
 	assertRepair(t, "{\n\"a\":\"foo\",//hello\n\"b\":\"bar\"\n}", "{\n\"a\":\"foo\",\n\"b\":\"bar\"\n}")
 }
 
 // TestShouldNotRemoveCommentsInsideString tests not removing comments inside a string in JSON.
 func TestShouldNotRemoveCommentsInsideString(t *testing.T) {
+	t.Parallel()
+
 	assertRepairEqual(t, `"/* foo */"`)
 }
 
 // TestShouldRemoveCommentsAfterStringContainingDelimiter tests removing comments after a string containing a delimiter.
 func TestShouldRemoveCommentsAfterStringContainingDelimiter(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `["a"/* foo */]`, `["a"]`)
 	assertRepair(t, `["(a)"/* foo */]`, `["(a)"]`)
 	assertRepair(t, `["a]"/* foo */]`, `["a]"]`)
@@ -422,6 +508,8 @@ func TestShouldRemoveCommentsAfterStringContainingDelimiter(t *testing.T) {
 
 // TestShouldStripJSONPNotation tests stripping JSONP notation in JSON.
 func TestShouldStripJSONPNotation(t *testing.T) {
+	t.Parallel()
+
 	// matching
 	assertRepair(t, "callback_123({});", "{}")
 	assertRepair(t, "callback_123([]);", "[]")
@@ -443,6 +531,8 @@ func TestShouldStripJSONPNotation(t *testing.T) {
 
 // TestShouldRepairEscapedStringContents tests repairing escaped string contents in JSON strings.
 func TestShouldRepairEscapedStringContents(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `\"hello world\"`, `"hello world"`)
 	assertRepair(t, `\"hello world\`, `"hello world"`)
 	assertRepair(t, `\"hello \\"world\\"\"`, `"hello \"world\""`)
@@ -459,6 +549,8 @@ func TestShouldRepairEscapedStringContents(t *testing.T) {
 
 // TestShouldStripLeadingCommaFromArray tests stripping a leading comma from JSON arrays.
 func TestShouldStripLeadingCommaFromArray(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `[1,2,3]`, `[1,2,3]`)
 	assertRepair(t, `[/* a */,/* b */1,2,3]`, `[1,2,3]`)
 	assertRepair(t, `[ , 1,2,3]`, `[  1,2,3]`)
@@ -467,6 +559,8 @@ func TestShouldStripLeadingCommaFromArray(t *testing.T) {
 
 // TestShouldStripLeadingCommaFromObject tests stripping a leading comma from an object in JSON strings.
 func TestShouldStripLeadingCommaFromObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{,"message": "hi"}`, `{"message": "hi"}`)
 	assertRepair(t, `{/* a */,/* b */"message": "hi"}`, `{"message": "hi"}`)
 	assertRepair(t, `{ ,"message": "hi"}`, `{ "message": "hi"}`)
@@ -475,6 +569,8 @@ func TestShouldStripLeadingCommaFromObject(t *testing.T) {
 
 // TestShouldStripTrailingCommasFromArray tests stripping trailing commas from JSON arrays.
 func TestShouldStripTrailingCommasFromArray(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "[1,2,3,]", "[1,2,3]")
 	assertRepair(t, "[1,2,3,\n]", "[1,2,3\n]")
 	assertRepair(t, "[1,2,3,  \n  ]", "[1,2,3  \n  ]")
@@ -486,6 +582,8 @@ func TestShouldStripTrailingCommasFromArray(t *testing.T) {
 
 // TestShouldStripTrailingCommasFromObject tests stripping trailing commas from JSON objects.
 func TestShouldStripTrailingCommasFromObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{\"a\":2,}", "{\"a\":2}")
 	assertRepair(t, "{\"a\":2  ,  }", "{\"a\":2    }")
 	assertRepair(t, "{\"a\":2  , \n }", "{\"a\":2   \n }")
@@ -497,6 +595,8 @@ func TestShouldStripTrailingCommasFromObject(t *testing.T) {
 
 // TestShouldStripTrailingCommaAtEnd tests stripping a trailing comma at the end of JSON.
 func TestShouldStripTrailingCommaAtEnd(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "4,", "4")
 	assertRepair(t, "4 ,", "4 ")
 	assertRepair(t, "4 , ", "4  ")
@@ -506,6 +606,8 @@ func TestShouldStripTrailingCommaAtEnd(t *testing.T) {
 
 // TestShouldAddMissingClosingBraceForObject tests adding a missing closing brace for JSON objects.
 func TestShouldAddMissingClosingBraceForObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{", "{}")
 	assertRepair(t, "{\"a\":2", "{\"a\":2}")
 	assertRepair(t, "{\"a\":2,", "{\"a\":2}")
@@ -519,6 +621,8 @@ func TestShouldAddMissingClosingBraceForObject(t *testing.T) {
 
 // TestShouldRemoveRedundantClosingBracketForObject tests removing a redundant closing bracket for JSON objects.
 func TestShouldRemoveRedundantClosingBracketForObject(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a": 1}}`, `{"a": 1}`)
 	assertRepair(t, `{"a": 1}}]}`, `{"a": 1}`)
 	assertRepair(t, `{"a": 1 }  }  ]  }  `, `{"a": 1 }        `)
@@ -532,6 +636,8 @@ func TestShouldRemoveRedundantClosingBracketForObject(t *testing.T) {
 
 // TestShouldAddMissingClosingBracketForArray tests adding a missing closing bracket for an array in JSON strings.
 func TestShouldAddMissingClosingBracketForArray(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "[", "[]")
 	assertRepair(t, "[1,2,3", "[1,2,3]")
 	assertRepair(t, "[1,2,3,", "[1,2,3]")
@@ -542,6 +648,8 @@ func TestShouldAddMissingClosingBracketForArray(t *testing.T) {
 
 // TestShouldStripMongoDBDataTypes tests stripping MongoDB data types in JSON.
 func TestShouldStripMongoDBDataTypes(t *testing.T) {
+	t.Parallel()
+
 	// simple
 	assertRepair(t, `NumberLong("2")`, `"2"`)
 	assertRepair(t, `{"_id":ObjectId("123")}`, `{"_id":"123"}`)
@@ -575,6 +683,8 @@ func TestShouldStripMongoDBDataTypes(t *testing.T) {
 
 // TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString tests not matching MongoDB-like functions in an unquoted string.
 func TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString(t *testing.T) {
+	t.Parallel()
+
 	result1, err1 := Repair(`["This is C(2)", "This is F(3)]`)
 	require.NoError(t, err1)
 	assert.NotEmpty(t, result1)
@@ -586,6 +696,8 @@ func TestShouldNotMatchMongoDBLikeFunctionsInUnquotedString(t *testing.T) {
 
 // TestShouldReplacePythonConstants tests replacing Python constants (None, True, False) in JSON.
 func TestShouldReplacePythonConstants(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `True`, `true`)
 	assertRepair(t, `False`, `false`)
 	assertRepair(t, `None`, `null`)
@@ -593,6 +705,8 @@ func TestShouldReplacePythonConstants(t *testing.T) {
 
 // TestShouldTurnUnknownSymbolsIntoString tests turning unknown symbols into a string in JSON strings.
 func TestShouldTurnUnknownSymbolsIntoString(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "foo", `"foo"`)
 	assertRepair(t, "[1,foo,4]", `[1,"foo",4]`)
 	assertRepair(t, "{foo: bar}", `{"foo": "bar"}`)
@@ -605,6 +719,8 @@ func TestShouldTurnUnknownSymbolsIntoString(t *testing.T) {
 
 // TestShouldTurnInvalidNumbersIntoStrings tests turning invalid numbers into strings in JSON.
 func TestShouldTurnInvalidNumbersIntoStrings(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `ES2020`, `"ES2020"`)
 	assertRepair(t, `0.0.1`, `"0.0.1"`)
 	assertRepair(t, `746de9ad-d4ff-4c66-97d7-00a92ad46967`, `"746de9ad-d4ff-4c66-97d7-00a92ad46967"`)
@@ -616,6 +732,8 @@ func TestShouldTurnInvalidNumbersIntoStrings(t *testing.T) {
 
 // TestShouldRepairRegularExpressions tests repairing regular expressions in JSON.
 func TestShouldRepairRegularExpressions(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{regex: /standalone-styles.css/}`, `{"regex": "/standalone-styles.css/"}`)
 	assertRepair(t, `{regex: /with escape char \/ [a-z]_/}`, `{"regex": "/with escape char \\/ [a-z]_/"}`)
 	assertRepair(t, `/[a-z]_/`, `"/[a-z]_/"`)
@@ -626,6 +744,8 @@ func TestShouldRepairRegularExpressions(t *testing.T) {
 // TestShouldEscapeQuotesInRepairedRegularExpressions tests XSS prevention in regex repair.
 // See https://github.com/josdejong/jsonrepair/issues/150
 func TestShouldEscapeQuotesInRepairedRegularExpressions(t *testing.T) {
+	t.Parallel()
+
 	repaired, err := Repair(`/foo"; console.log(-1); "/`)
 	require.NoError(t, err)
 	assert.Equal(t, `"/foo\"; console.log(-1); \"/"`, repaired)
@@ -637,6 +757,8 @@ func TestShouldEscapeQuotesInRepairedRegularExpressions(t *testing.T) {
 
 // TestShouldConcatenateStrings tests concatenating strings in JSON strings.
 func TestShouldConcatenateStrings(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `"hello" + " world"`, `"hello world"`)
 	assertRepair(t, "\"hello\" +\n \" world\"", `"hello world"`)
 	assertRepair(t, `"a"+"b"+"c"`, `"abc"`)
@@ -651,6 +773,8 @@ func TestShouldConcatenateStrings(t *testing.T) {
 
 // TestShouldRepairMissingCommaBetweenArrayItems tests repairing missing commas between array items in JSON.
 func TestShouldRepairMissingCommaBetweenArrayItems(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"array": [{}{}]}`, `{"array": [{},{}]}`)
 	assertRepair(t, `{"array": [{} {}]}`, `{"array": [{}, {}]}`)
 	assertRepair(t, `{"array": [{}`+"\n"+`{}]}`, "{\"array\": [{},\n"+`{}]}`)
@@ -663,6 +787,8 @@ func TestShouldRepairMissingCommaBetweenArrayItems(t *testing.T) {
 
 // TestShouldRepairMissingCommaBetweenObjectProperties tests repairing missing commas between object properties in JSON.
 func TestShouldRepairMissingCommaBetweenObjectProperties(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{\"a\":2\n\"b\":3\n}", "{\"a\":2,\n\"b\":3\n}")
 	assertRepair(t, "{\"a\":2\n\"b\":3\nc:4}", "{\"a\":2,\n\"b\":3,\n\"c\":4}")
 	assertRepair(t, "{\n  \"firstName\": \"John\"\n  lastName: Smith", "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\"}")
@@ -673,6 +799,8 @@ func TestShouldRepairMissingCommaBetweenObjectProperties(t *testing.T) {
 
 // TestShouldRepairNumbersAtEnd tests repairing numbers at the end of JSON.
 func TestShouldRepairNumbersAtEnd(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a":2.}`, `{"a":2.0}`)
 	assertRepair(t, `{"a":2e}`, `{"a":2e0}`)
 	assertRepair(t, `{"a":2e-}`, `{"a":2e-0}`)
@@ -684,6 +812,8 @@ func TestShouldRepairNumbersAtEnd(t *testing.T) {
 
 // TestShouldRepairMissingColon tests repairing a missing colon in JSON objects.
 func TestShouldRepairMissingColon(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `{"a" "b"}`, `{"a": "b"}`)
 	assertRepair(t, `{"a" 2}`, `{"a": 2}`)
 	assertRepair(t, `{"a" true}`, `{"a": true}`)
@@ -700,6 +830,8 @@ func TestShouldRepairMissingColon(t *testing.T) {
 
 // TestShouldRepairCombinationOfMissingChars tests repairing a combination of missing characters.
 func TestShouldRepairCombinationOfMissingChars(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "{\"array\": [\na\nb\n]}", "{\"array\": [\n\"a\",\n\"b\"\n]}")
 	assertRepair(t, "1\n2", "[\n1,\n2\n]")
 	assertRepair(t, "[a,b\nc]", "[\"a\",\"b\",\n\"c\"]")
@@ -707,6 +839,8 @@ func TestShouldRepairCombinationOfMissingChars(t *testing.T) {
 
 // TestShouldRepairNewlineSeparatedJSON tests repairing newline separated JSON.
 func TestShouldRepairNewlineSeparatedJSON(t *testing.T) {
+	t.Parallel()
+
 	text := "/* 1 */\n{}\n\n/* 2 */\n{}\n\n/* 3 */\n{}\n"
 	expected := "[\n\n{},\n\n\n{},\n\n\n{}\n\n]"
 	assertRepair(t, text, expected)
@@ -722,6 +856,8 @@ func TestShouldRepairNewlineSeparatedJSON(t *testing.T) {
 
 // TestShouldRepairCommaSeparatedList tests repairing a comma separated list.
 func TestShouldRepairCommaSeparatedList(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "1,2,3", "[\n1,2,3\n]")
 	assertRepair(t, "1,2,3,", "[\n1,2,3\n]")
 	assertRepair(t, "1\n2\n3", "[\n1,\n2,\n3\n]")
@@ -731,6 +867,8 @@ func TestShouldRepairCommaSeparatedList(t *testing.T) {
 
 // TestShouldRepairNumberWithLeadingZero tests repairing numbers with leading zeros.
 func TestShouldRepairNumberWithLeadingZero(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, `0789`, `"0789"`)
 	assertRepair(t, `000789`, `"000789"`)
 	assertRepair(t, `001.2`, `"001.2"`)
@@ -741,6 +879,8 @@ func TestShouldRepairNumberWithLeadingZero(t *testing.T) {
 
 // TestShouldStripMarkdownFencedCodeBlocks tests stripping Markdown fenced code blocks.
 func TestShouldStripMarkdownFencedCodeBlocks(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "```\n{\"a\":\"b\"}\n```", "\n{\"a\":\"b\"}\n")
 	assertRepair(t, "```json\n{\"a\":\"b\"}\n```", "\n{\"a\":\"b\"}\n")
 	assertRepair(t, "```\n{\"a\":\"b\"}\n", "\n{\"a\":\"b\"}\n")
@@ -754,6 +894,8 @@ func TestShouldStripMarkdownFencedCodeBlocks(t *testing.T) {
 
 // TestShouldStripInvalidMarkdownFencedCodeBlocks tests stripping invalid Markdown fenced code blocks.
 func TestShouldStripInvalidMarkdownFencedCodeBlocks(t *testing.T) {
+	t.Parallel()
+
 	assertRepair(t, "[```\n{\"a\":\"b\"}\n```]", "\n{\"a\":\"b\"}\n")
 	assertRepair(t, "[```json\n{\"a\":\"b\"}\n```]", "\n{\"a\":\"b\"}\n")
 
@@ -764,6 +906,8 @@ func TestShouldStripInvalidMarkdownFencedCodeBlocks(t *testing.T) {
 // TestShouldThrowExceptionForNonRepairableIssues tests error handling for non-repairable JSON issues.
 // Updated to match TypeScript version behavior precisely
 func TestShouldThrowExceptionForNonRepairableIssues(t *testing.T) {
+	t.Parallel()
+
 	// Precise matches with TypeScript version error messages and positions
 	assertRepairFailureExact(t, "", "unexpected end of json string", 0)
 	assertRepairFailureExact(t, `{"a",`, "colon expected", 4)
@@ -873,6 +1017,8 @@ func TestErrorConstructors(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			got := tc.build()
 
 			assert.Equal(t, tc.wantMessage, got.Message)
@@ -992,6 +1138,8 @@ func assertRepair(t *testing.T, text string, expected string) {
 
 // TestShouldNotPanicOnIncompleteEscapeSymbols tests that incomplete escape symbols don't cause panic.
 func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
+	t.Parallel()
+
 	testCases := []string{
 		`{"message": "hello world\`,
 		`{"text": "incomplete escape\`,
@@ -1001,6 +1149,8 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
+			t.Parallel()
+
 			assert.NotPanics(t, func() {
 				_, _ = Repair(testCase)
 			})
@@ -1010,6 +1160,8 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 
 // TestBackslashEscapingFilePaths tests file path specific backslash escaping behavior
 func TestBackslashEscapingFilePaths(t *testing.T) {
+	t.Parallel()
+
 	// Test case 1: File paths with drive letters - backslashes should be escaped
 	assertRepair(t, `{"path": "C:\temp"}`, `{"path": "C:\\temp"}`)
 	assertRepair(t, `{"path": "C:\documents\name"}`, `{"path": "C:\\documents\\name"}`)
@@ -1026,6 +1178,8 @@ func TestBackslashEscapingFilePaths(t *testing.T) {
 
 // TestFilePathSpecificEscaping demonstrates file path specific escaping behavior.
 func TestFilePathSpecificEscaping(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name     string
 		input    string
@@ -1051,6 +1205,12 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 			desc:     "Common directory names trigger file path mode",
 		},
 		{
+			name:     "Lowercase users path segment",
+			input:    `{"path": "C:\users\name.txt"}`,
+			expected: `{"path": "C:\\users\\name.txt"}`,
+			desc:     `Lowercase \u path segments stay literal in file paths`,
+		},
+		{
 			name:     "Regular JSON escapes preserved",
 			input:    `{"msg": "Hello\nWorld\tTest"}`,
 			expected: `{"msg": "Hello\\nWorld\\tTest"}`,
@@ -1066,6 +1226,8 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := Repair(tc.input)
 			require.NoError(t, err, "Should not error: %s", tc.desc)
 			assert.Equal(t, tc.expected, result, "Failed: %s", tc.desc)
@@ -1079,6 +1241,8 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 
 // TestJSONStandardEscapeSequences tests escape sequence handling according to JSON standard
 func TestJSONStandardEscapeSequences(t *testing.T) {
+	t.Parallel()
+
 	// Test that already properly escaped content remains unchanged
 	assertRepairEqual(t, `"Simple text"`)
 	assertRepairEqual(t, `{"text": "hello"}`)
@@ -1108,6 +1272,8 @@ func TestJSONStandardEscapeSequences(t *testing.T) {
 
 // TestJSONEscapeSequencesInContext tests escape sequences in various JSON contexts
 func TestJSONEscapeSequencesInContext(t *testing.T) {
+	t.Parallel()
+
 	// In object keys (with quotes) - current implementation splits these into separate key-value pairs
 	assertRepair(t, `{key"with"quotes: "value"}`, `{"key":"with","quotes": "value"}`)
 
@@ -1121,6 +1287,8 @@ func TestJSONEscapeSequencesInContext(t *testing.T) {
 
 // TestJSONEscapeSequencesEdgeCases tests edge cases for escape sequence handling
 func TestJSONEscapeSequencesEdgeCases(t *testing.T) {
+	t.Parallel()
+
 	// Already properly escaped sequences - note: current implementation may add extra escaping
 	assertRepairEqual(t, `"Double\\backslash"`)
 	assertRepair(t, `"Quote\"and\"quote"`, `"Quote\\\"and\\\"quote"`) // quotes get extra escaping
@@ -1137,6 +1305,8 @@ func TestJSONEscapeSequencesEdgeCases(t *testing.T) {
 
 // TestJSONEscapeSequenceCompliance tests compliance with JSON standard
 func TestJSONEscapeSequenceCompliance(t *testing.T) {
+	t.Parallel()
+
 	// Valid JSON with all required escapes should remain unchanged
 	validJSON := `{"message": "He said \"Hello\\World\"\nNext line\tTabbed"}`
 	assertRepairEqual(t, validJSON)

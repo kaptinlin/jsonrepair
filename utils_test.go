@@ -9,6 +9,8 @@ import (
 )
 
 func TestInsertBeforeLastWhitespace(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		text         string
 		textToInsert string
@@ -35,6 +37,8 @@ func TestInsertBeforeLastWhitespace(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+
 			result := insertBeforeLastWhitespace(test.text, test.textToInsert)
 			assert.Equal(t, test.expected, result)
 		})
@@ -42,6 +46,8 @@ func TestInsertBeforeLastWhitespace(t *testing.T) {
 }
 
 func TestIsUNCPath(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -57,6 +63,8 @@ func TestIsUNCPath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
 			assert.Equal(t, test.expected, isUNCPath(test.input))
 		})
 	}
@@ -64,6 +72,8 @@ func TestIsUNCPath(t *testing.T) {
 
 // TestIsLikelyFilePath tests the improved file path detection function.
 func TestIsLikelyFilePath(t *testing.T) {
+	t.Parallel()
+
 	// Test cases that should be detected as file paths
 	positiveTests := []struct {
 		input string
@@ -105,6 +115,8 @@ func TestIsLikelyFilePath(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.True(t, isLikelyFilePath(test.input),
 				"Expected %q to be detected as file path (%s)", test.input, test.desc)
 		})
@@ -150,6 +162,8 @@ func TestIsLikelyFilePath(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.False(t, isLikelyFilePath(test.input),
 				"Expected %q NOT to be detected as file path (%s)", test.input, test.desc)
 		})
@@ -158,6 +172,8 @@ func TestIsLikelyFilePath(t *testing.T) {
 
 // TestAnalyzePotentialFilePath tests the path analysis function with rune arrays.
 func TestAnalyzePotentialFilePath(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		input    string
 		expected bool
@@ -194,6 +210,8 @@ func TestAnalyzePotentialFilePath(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
 			runes := []rune(tc.input)
 			result := analyzePotentialFilePath(&runes, 0)
 			assert.Equal(t, tc.expected, result, "Failed for: %s", tc.desc)
@@ -203,6 +221,8 @@ func TestAnalyzePotentialFilePath(t *testing.T) {
 
 // TestIsURLPath tests the URL-style file path detection function.
 func TestIsURLPath(t *testing.T) {
+	t.Parallel()
+
 	positiveTests := []struct {
 		input string
 		desc  string
@@ -223,6 +243,8 @@ func TestIsURLPath(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.True(t, isURLPath(test.input),
 				"Expected %q to be detected as URL-style file path (%s)", test.input, test.desc)
 		})
@@ -245,6 +267,8 @@ func TestIsURLPath(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.False(t, isURLPath(test.input),
 				"Expected %q NOT to be detected as URL-style file path (%s)", test.input, test.desc)
 		})
@@ -252,6 +276,8 @@ func TestIsURLPath(t *testing.T) {
 }
 
 func TestIsExcludedURL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		input    string
 		expected bool
@@ -267,6 +293,8 @@ func TestIsExcludedURL(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.Equal(t, tc.expected, isExcludedURL(strings.ToLower(tc.input), tc.input))
 		})
 	}
@@ -274,6 +302,8 @@ func TestIsExcludedURL(t *testing.T) {
 
 // TestHasValidPathStructure tests the path structure validation function.
 func TestHasValidPathStructure(t *testing.T) {
+	t.Parallel()
+
 	positiveTests := []struct {
 		input string
 		desc  string
@@ -290,6 +320,8 @@ func TestHasValidPathStructure(t *testing.T) {
 
 	for _, test := range positiveTests {
 		t.Run("positive_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.True(t, hasValidPathStructure(test.input),
 				"Expected %q to be detected as valid path structure (%s)", test.input, test.desc)
 		})
@@ -308,6 +340,8 @@ func TestHasValidPathStructure(t *testing.T) {
 
 	for _, test := range negativeTests {
 		t.Run("negative_"+test.desc, func(t *testing.T) {
+			t.Parallel()
+
 			assert.False(t, hasValidPathStructure(test.input),
 				"Expected %q NOT to be detected as valid path structure (%s)", test.input, test.desc)
 		})
@@ -320,6 +354,8 @@ func TestHasValidPathStructure(t *testing.T) {
 
 // TestFilePathDetectionLogic tests the core file path detection logic
 func TestFilePathDetectionLogic(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		input       string
 		isFilePath  bool
@@ -343,6 +379,8 @@ func TestFilePathDetectionLogic(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
+			t.Parallel()
+
 			runes := []rune(tc.input)
 			result := analyzePotentialFilePath(&runes, 0)
 			assert.Equal(t, tc.isFilePath, result, "Failed for: %s", tc.description)
@@ -352,11 +390,15 @@ func TestFilePathDetectionLogic(t *testing.T) {
 
 // TestJSONEscapeCharacterValidation tests validation of escape characters according to JSON standard
 func TestJSONEscapeCharacterValidation(t *testing.T) {
+	t.Parallel()
+
 	validEscapes := []rune{'"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u'}
 
 	// Test that valid JSON escape characters are recognized
 	for _, escape := range validEscapes {
 		t.Run(fmt.Sprintf("valid_escape_%c", escape), func(t *testing.T) {
+			t.Parallel()
+
 			// Verify the character is in our expected valid set
 			switch escape {
 			case '"', '\\', '/', 'b', 'f', 'n', 'r', 't', 'u':
@@ -370,6 +412,8 @@ func TestJSONEscapeCharacterValidation(t *testing.T) {
 
 // TestPathPatternHelpers tests path pattern helper predicates.
 func TestPathPatternHelpers(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		got  bool
@@ -385,12 +429,16 @@ func TestPathPatternHelpers(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			assert.Equal(t, tc.want, tc.got)
 		})
 	}
 }
 
 func TestFilePathDetectionWithEscapes(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		input    string
 		expected bool
@@ -424,6 +472,8 @@ func TestFilePathDetectionWithEscapes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
 			result := isLikelyFilePath(tc.input)
 			assert.Equal(t, tc.expected, result, "Failed for: %s", tc.desc)
 		})
@@ -432,6 +482,8 @@ func TestFilePathDetectionWithEscapes(t *testing.T) {
 
 // TestUnicodeEscapeSequenceHandling tests handling of Unicode escape sequences
 func TestUnicodeEscapeSequenceHandling(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		input       string
 		isValidJSON bool
@@ -450,6 +502,8 @@ func TestUnicodeEscapeSequenceHandling(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
 			// Test the pattern - complete Unicode escapes should have exactly 4 hex digits
 			if tc.isValidJSON {
 				assert.Len(t, tc.input, 6, "Valid Unicode escape should be 6 characters")
@@ -470,6 +524,8 @@ func TestUnicodeEscapeSequenceHandling(t *testing.T) {
 
 // TestSpecialQuoteCharacterHandling tests handling of special quote characters
 func TestSpecialQuoteCharacterHandling(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		input string
 		desc  string
@@ -484,6 +540,8 @@ func TestSpecialQuoteCharacterHandling(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
+			t.Parallel()
+
 			// These should all be recognized as quote-like characters
 			// and converted to standard JSON double quotes
 			runes := []rune(tc.input)
@@ -504,6 +562,8 @@ func TestSpecialQuoteCharacterHandling(t *testing.T) {
 }
 
 func TestIsStartOfValue(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name  string
 		input rune
@@ -525,12 +585,16 @@ func TestIsStartOfValue(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			assert.Equal(t, tc.want, isStartOfValue(tc.input))
 		})
 	}
 }
 
 func TestParseComment(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name      string
 		input     string
@@ -547,6 +611,8 @@ func TestParseComment(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			runes := []rune(tc.input)
 			index := tc.start
 
