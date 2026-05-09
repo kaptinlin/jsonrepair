@@ -210,7 +210,6 @@ var (
 	containsDriveRe          = regexp.MustCompile(`[A-Za-z]:\\`)
 	base64Re                 = regexp.MustCompile(`^[A-Za-z0-9+/=]{20,}$`)
 	fileExtensionRe          = regexp.MustCompile(`(?i)\.[a-z0-9]{2,5}(\?|$|\\|"|/)`)
-	unicodeEscapeRe          = regexp.MustCompile(`\\u[0-9a-fA-F]{4}`)
 	urlEncodingRe            = regexp.MustCompile(`%[0-9a-fA-F]{2}`)
 )
 
@@ -262,22 +261,29 @@ var commonFileExtensions = []string{
 	".dat", ".bin", ".raw", ".dump",
 }
 
-// hasExcessiveEscapeSequences checks if content has too many escape sequences to be a valid file path.
 func hasExcessiveEscapeSequences(content string) bool {
 	if len(content) < 3 {
 		return false
 	}
 
-	// Count Unicode escape sequences
-	unicodeMatches := unicodeEscapeRe.FindAllString(content, -1)
-	if len(unicodeMatches) >= 2 {
-		totalUnicodeLength := len(unicodeMatches) * 6 // Each \uXXXX is 6 chars
-		if float64(totalUnicodeLength)/float64(len(content)) > 0.6 {
-			return true
+	unicodeCount := 0
+	const unicodeEscapeLen = 6
+	for i := 0; i+unicodeEscapeLen <= len(content); {
+		if content[i] == '\\' && content[i+1] == 'u' &&
+			isHex(rune(content[i+2])) &&
+			isHex(rune(content[i+3])) &&
+			isHex(rune(content[i+4])) &&
+			isHex(rune(content[i+5])) {
+			unicodeCount++
+			i += unicodeEscapeLen
+			continue
 		}
+		i++
+	}
+	if unicodeCount >= 2 && float64(unicodeCount*unicodeEscapeLen)/float64(len(content)) > 0.6 {
+		return true
 	}
 
-	// Count general escape sequences
 	escapeCount := 0
 	for i := range len(content) - 1 {
 		if content[i] == '\\' {
@@ -288,11 +294,9 @@ func hasExcessiveEscapeSequences(content string) bool {
 		}
 	}
 
-	// If more than 30% of content is escape sequences, likely not a path
 	return escapeCount > 0 && float64(escapeCount*2)/float64(len(content)) > 0.3
 }
 
-// isLikelyTextBlob identifies content that has text-like characteristics.
 func isLikelyTextBlob(content string) bool {
 	if len(content) < 3 {
 		return false
@@ -338,7 +342,6 @@ func isLikelyTextBlob(content string) bool {
 	return false
 }
 
-// isBase64String checks if content appears to be base64 encoded.
 func isBase64String(content string) bool {
 	if len(content) < 20 {
 		return false
@@ -410,7 +413,6 @@ func isURLPath(content string) bool {
 	return false
 }
 
-// countValidPathSegments counts meaningful path segments.
 func countValidPathSegments(content, separator string) int {
 	count := 0
 
@@ -424,19 +426,15 @@ func countValidPathSegments(content, separator string) int {
 	return count
 }
 
-// hasFileExtension checks if content has a valid file extension.
 func hasFileExtension(content string) bool {
-	// Use Go's filepath.Ext for standard detection
 	ext := filepath.Ext(content)
 	if len(ext) > 1 && len(ext) <= 6 {
 		return true
 	}
 
-	// Use regex for additional patterns
 	return fileExtensionRe.MatchString(content)
 }
 
-// hasValidPathStructure validates the overall path structure.
 func hasValidPathStructure(pathStr string) bool {
 	if len(pathStr) < 2 {
 		return false
@@ -467,7 +465,6 @@ func hasValidPathStructure(pathStr string) bool {
 		strings.HasPrefix(pathStr, "/") && matchesUnixPathPattern(lowerPath)
 }
 
-// isValidPathCharacter checks if a character is valid in file paths.
 func isValidPathCharacter(r rune) bool {
 	if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
 		return true
@@ -476,7 +473,6 @@ func isValidPathCharacter(r rune) bool {
 		r == '-' || r == '_' || r == ' ' || r == '~'
 }
 
-// hasReasonableCharacterDistribution checks character distribution for path-like content.
 func hasReasonableCharacterDistribution(content string) bool {
 	if len(content) == 0 {
 		return false
@@ -493,28 +489,24 @@ func hasReasonableCharacterDistribution(content string) bool {
 	return float64(validChars)/float64(len(content)) >= 0.7
 }
 
-// matchesWindowsPathPattern checks if content matches common Windows directory patterns.
 func matchesWindowsPathPattern(lowerContent string) bool {
 	return slices.ContainsFunc(windowsPathPatterns, func(pattern string) bool {
 		return strings.Contains(lowerContent, pattern)
 	})
 }
 
-// matchesUnixPathPattern checks if content matches common Unix/macOS directory patterns.
 func matchesUnixPathPattern(lowerContent string) bool {
 	return slices.ContainsFunc(unixPathPatterns, func(pattern string) bool {
 		return strings.Contains(lowerContent, pattern)
 	})
 }
 
-// hasCommonFileExtension checks if content ends with a common file extension.
 func hasCommonFileExtension(lowerContent string) bool {
 	return slices.ContainsFunc(commonFileExtensions, func(ext string) bool {
 		return strings.HasSuffix(lowerContent, ext)
 	})
 }
 
-// isExcludedURL checks if content is a URL that should be excluded from path detection.
 func isExcludedURL(lowerContent, content string) bool {
 	if strings.HasPrefix(lowerContent, "http://") || strings.HasPrefix(lowerContent, "https://") {
 		return true
@@ -525,7 +517,6 @@ func isExcludedURL(lowerContent, content string) bool {
 	return false
 }
 
-// passesEarlyExclusionFilters checks if content passes all early exclusion filters.
 func passesEarlyExclusionFilters(content string) bool {
 	return !hasExcessiveEscapeSequences(content) &&
 		!isLikelyTextBlob(content) &&
@@ -533,7 +524,6 @@ func passesEarlyExclusionFilters(content string) bool {
 		!hasURLEncoding(content)
 }
 
-// matchesAbsolutePathFormat checks if content matches any absolute path format.
 func matchesAbsolutePathFormat(content string) bool {
 	return isURLPath(content) ||
 		isWindowsAbsolutePath(content) ||
@@ -541,7 +531,6 @@ func matchesAbsolutePathFormat(content string) bool {
 		isUnixAbsolutePath(content)
 }
 
-// isLikelyFilePath determines if a string looks like a file path.
 func isLikelyFilePath(content string) bool {
 	if len(content) < 2 {
 		return false
@@ -586,18 +575,15 @@ func isLikelyFilePath(content string) bool {
 	return hasValidPathStructure(content)
 }
 
-// analyzePotentialFilePath analyzes text to determine if it contains file paths.
 func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 	if startPos >= len(*text) || (*text)[startPos] != '"' {
 		return false
 	}
 
-	// Extract string content
 	i := startPos + 1
 	var contentBuilder strings.Builder
 	hasPathSeparator := false
 
-	// Collect content until closing quote (with reasonable limit)
 	const maxScanLength = 150
 	for i < len(*text) && i < startPos+maxScanLength {
 		char := (*text)[i]
@@ -606,23 +592,19 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 			break
 		}
 
-		// Track path separators
 		if char == '\\' || char == '/' {
 			hasPathSeparator = true
 		}
 
-		// Handle escape sequences for path detection
 		if char == '\\' && i+1 < len(*text) {
 			nextChar := (*text)[i+1]
 			switch nextChar {
 			case '"', '\\', '/', 'b', 'f', 'n', 'r', 't':
-				// Preserve escape sequences as-is for path analysis
 				contentBuilder.WriteRune(char)
 				contentBuilder.WriteRune(nextChar)
 				i += 2
 				continue
 			case 'u':
-				// Unicode escape
 				if i+5 < len(*text) {
 					for range 6 {
 						contentBuilder.WriteRune((*text)[i])

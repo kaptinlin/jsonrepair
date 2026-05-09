@@ -70,7 +70,30 @@ func TestIsUNCPath(t *testing.T) {
 	}
 }
 
-// TestIsLikelyFilePath tests the improved file path detection function.
+func TestHasExcessiveEscapeSequences(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{name: "dense unicode escapes", input: `\\u0048\\u0065`, want: true},
+		{name: "sparse unicode escapes", input: `prefix \\u0048 suffix \\u0065`, want: false},
+		{name: "single unicode escape", input: `\\u0048`, want: false},
+		{name: "dense standard escapes", input: `\\n\\t\\r`, want: true},
+		{name: "ordinary path", input: `C:\Users\name\file.txt`, want: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.want, hasExcessiveEscapeSequences(tc.input))
+		})
+	}
+}
+
 func TestIsLikelyFilePath(t *testing.T) {
 	t.Parallel()
 

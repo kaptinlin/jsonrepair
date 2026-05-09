@@ -262,7 +262,6 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 
 			skipEllipsis(text, i, output)
 
-			// Try parseString for object key and handle errors
 			stringProcessed, err := parseString(text, i, output, false, -1)
 			if err != nil {
 				return false, err
@@ -416,12 +415,10 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 // parseNewlineDelimitedJSON parses Newline Delimited JSON (NDJSON) from the input text.
 func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 	initial := true
-	processedValue := true
 
-	for processedValue {
+	for {
 		if !initial {
-			processedComma := parseCharacter(text, i, output, codeComma)
-			if !processedComma {
+			if !parseCharacter(text, i, output, codeComma) {
 				// repair: add missing comma
 				resetOutput(output, insertBeforeLastWhitespace(output.String(), ","))
 			}
@@ -429,15 +426,11 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 			initial = false
 		}
 
-		var err error
-		processedValue, err = parseValue(text, i, output)
-		if err != nil {
-			processedValue = false
+		processedValue, err := parseValue(text, i, output)
+		if err != nil || !processedValue {
+			resetOutput(output, stripLastOccurrence(output.String(), ",", false))
+			break
 		}
-	}
-
-	if !processedValue {
-		resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 	}
 
 	resetOutput(output, "[\n"+output.String()+"\n]")
@@ -634,45 +627,10 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 								str.WriteString("\\\\")
 								*i++
 							} else {
-								// Still looks like malformed Unicode escape - throw error
-								endJ := 2 // Start after \u
-								for endJ < unicodeEscapeLen && *i+endJ < len(*text) {
-									nextChar := (*text)[*i+endJ]
-									if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
-										break
-									}
-									endJ++
-								}
-								chars := string((*text)[*i : *i+endJ])
-								escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
-								msg := fmt.Sprintf("invalid unicode character \"%s\"", escapedChars)
-								return false, newInvalidUnicodeError(msg, *i)
+								return false, invalidUnicodeSequenceError(*text, *i, hexCount, false)
 							}
 						} else {
-							// Not in file path context or malformed Unicode - throw error
-							endJ := 2 // Start after \u
-							for endJ < unicodeEscapeLen && *i+endJ < len(*text) {
-								nextChar := (*text)[*i+endJ]
-								// Stop at whitespace or string delimiters
-								if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
-									break
-								}
-								endJ++
-							}
-
-							chars := string((*text)[*i : *i+endJ])
-							// Format to match TypeScript
-							escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
-
-							// Add extra quote only for incomplete sequences like "\u26"
-							if hexCount < hexDigits && endJ == 2+hexCount {
-								// Incomplete sequence like "\u26" needs extra quote
-								msg := fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars)
-								return false, newInvalidUnicodeError(msg, *i)
-							}
-							// Complete but invalid sequence like "\uZ000"
-							msg := fmt.Sprintf("invalid unicode character \"%s\"", escapedChars)
-							return false, newInvalidUnicodeError(msg, *i)
+							return false, invalidUnicodeSequenceError(*text, *i, hexCount, true)
 						}
 					}
 
@@ -736,6 +694,26 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 	return false, nil
 }
 
+func invalidUnicodeSequenceError(text []rune, start, hexCount int, quoteIncomplete bool) *Error {
+	const unicodeEscapeLen = 6
+
+	end := 2
+	for end < unicodeEscapeLen && start+end < len(text) {
+		nextChar := text[start+end]
+		if nextChar == '"' || nextChar == '\'' || isWhitespace(nextChar) {
+			break
+		}
+		end++
+	}
+
+	chars := string(text[start : start+end])
+	escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
+	if quoteIncomplete && hexCount < 4 && end == 2+hexCount {
+		return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars), start)
+	}
+	return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character \"%s\"", escapedChars), start)
+}
+
 // parseConcatenatedString parses concatenated strings (e.g., "hello" + "world").
 func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool {
 	processed := false
@@ -753,7 +731,6 @@ func parseConcatenatedString(text *[]rune, i *int, output *strings.Builder) bool
 		resetOutput(output, stripLastOccurrence(output.String(), "\"", true))
 		start := output.Len()
 
-		// Try parseString and handle errors
 		stringProcessed, err := parseString(text, i, output, false, -1)
 		if err != nil {
 			// For concatenated strings, errors are not critical - just stop processing
