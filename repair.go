@@ -414,22 +414,15 @@ func parseArray(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 
 // parseNewlineDelimitedJSON parses Newline Delimited JSON (NDJSON) from the input text.
 func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
-	initial := true
-
 	for {
-		if !initial {
-			if !parseCharacter(text, i, output, codeComma) {
-				// repair: add missing comma
-				resetOutput(output, insertBeforeLastWhitespace(output.String(), ","))
-			}
-		} else {
-			initial = false
-		}
-
 		processedValue, err := parseValue(text, i, output)
 		if err != nil || !processedValue {
 			resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 			break
+		}
+
+		if !parseCharacter(text, i, output, codeComma) {
+			resetOutput(output, insertBeforeLastWhitespace(output.String(), ","))
 		}
 	}
 

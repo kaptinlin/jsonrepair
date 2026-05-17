@@ -862,6 +862,7 @@ func TestShouldRepairCommaSeparatedList(t *testing.T) {
 	assertRepair(t, "1,2,3", "[\n1,2,3\n]")
 	assertRepair(t, "1,2,3,", "[\n1,2,3\n]")
 	assertRepair(t, "1\n2\n3", "[\n1,\n2,\n3\n]")
+	assertRepair(t, "1\n2\n", "[\n1,\n2\n\n]")
 	assertRepair(t, "a\nb", "[\n\"a\",\n\"b\"\n]")
 	assertRepair(t, "a,b", "[\n\"a\",\"b\"\n]")
 }
