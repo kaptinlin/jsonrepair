@@ -725,6 +725,7 @@ func TestShouldTurnInvalidNumbersIntoStrings(t *testing.T) {
 	assertRepair(t, `0.0.1`, `"0.0.1"`)
 	assertRepair(t, `746de9ad-d4ff-4c66-97d7-00a92ad46967`, `"746de9ad-d4ff-4c66-97d7-00a92ad46967"`)
 	assertRepair(t, `234..5`, `"234..5"`)
+	assertRepair(t, `-x`, `"-x"`)
 	assertRepair(t, `[0.0.1,2]`, `["0.0.1",2]`)      // test delimiter for numerics
 	assertRepair(t, `[2 0.0.1 2]`, `[2, "0.0.1 2"]`) // note: currently spaces delimit numbers, but don't delimit unquoted strings
 	assertRepair(t, `2e3.4`, `"2e3.4"`)
@@ -1046,6 +1047,13 @@ func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
 			wantPosition: 0,
 		},
 		{
+			name:         "delimiter without value",
+			input:        ",",
+			wantSentinel: ErrUnexpectedEnd,
+			wantMessage:  "unexpected end of json string",
+			wantPosition: 1,
+		},
+		{
 			name:         "object key expected",
 			input:        `{:2}`,
 			wantSentinel: ErrObjectKeyExpected,
@@ -1079,6 +1087,41 @@ func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
 			wantSentinel: ErrInvalidUnicode,
 			wantMessage:  `invalid unicode character "\\uZ000"`,
 			wantPosition: 1,
+		},
+		{
+			name:         "array value invalid unicode",
+			input:        `["\uZ000"]`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\uZ000"`,
+			wantPosition: 2,
+		},
+		{
+			name:         "object key invalid unicode",
+			input:        `{"\uZ000":1}`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\uZ000"`,
+			wantPosition: 2,
+		},
+		{
+			name:         "object value invalid unicode",
+			input:        `{"a":"\uZ000"}`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\uZ000"`,
+			wantPosition: 6,
+		},
+		{
+			name:         "file path invalid unicode",
+			input:        `{"path":"C:\users\u-ooo"}`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\u-ooo"`,
+			wantPosition: 17,
+		},
+		{
+			name:         "newline delimited invalid unicode tail",
+			input:        "1\n\"\\uZ000\"",
+			wantSentinel: ErrUnexpectedCharacter,
+			wantMessage:  `unexpected character "\\"`,
+			wantPosition: 3,
 		},
 	}
 
@@ -1151,9 +1194,16 @@ func TestShouldNotPanicOnIncompleteEscapeSymbols(t *testing.T) {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
 			t.Parallel()
 
+			var (
+				result string
+				err    error
+			)
+
 			assert.NotPanics(t, func() {
-				_, _ = Repair(testCase)
+				result, err = Repair(testCase)
 			})
+			require.NoError(t, err)
+			assert.NotEmpty(t, result)
 		})
 	}
 }
@@ -1209,6 +1259,12 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 			input:    `{"path": "C:\users\name.txt"}`,
 			expected: `{"path": "C:\\users\\name.txt"}`,
 			desc:     `Lowercase \u path segments stay literal in file paths`,
+		},
+		{
+			name:     "Unicode escape-like Windows path segment",
+			input:    `{"path": "C:\users\u1234"}`,
+			expected: `{"path": "C:\\users\\u1234"}`,
+			desc:     `Unicode-looking \u path segments stay literal in file paths`,
 		},
 		{
 			name:     "Regular JSON escapes preserved",
@@ -1339,7 +1395,9 @@ func BenchmarkRepair(b *testing.B) {
 		b.Run(tc.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				_, _ = Repair(tc.input)
+				if _, err := Repair(tc.input); err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}

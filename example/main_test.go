@@ -12,6 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var errWriteFailed = errors.New("write failed")
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) {
+	return 0, errWriteFailed
+}
+
 func TestRunWritesRepairedJSON(t *testing.T) {
 	t.Parallel()
 
@@ -21,6 +29,14 @@ func TestRunWritesRepairedJSON(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "{\"name\": \"John\"}\n", output.String())
+}
+
+func TestRunReturnsWriterError(t *testing.T) {
+	t.Parallel()
+
+	err := run(failingWriter{}, "{name: 'John'}")
+
+	require.ErrorIs(t, err, errWriteFailed)
 }
 
 func TestMainWritesRepairedJSON(t *testing.T) {
