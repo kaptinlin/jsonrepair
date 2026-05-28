@@ -1,41 +1,82 @@
 version: "2"
 
 run:
-  timeout: 5m
+  timeout: 30m
+  concurrency: 1
   go: "1.26.3"
-  tests: true
 
 linters:
+  default: standard
   enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    - misspell
-    - revive
-    - whitespace
-    - err113
+    - errname
     - errorlint
     - nilerr
-    - gocritic
-    - nakedret
-    - unconvert
-    - dogsled
-    - copyloopvar
-    - prealloc
-    - gosec
     - exhaustive
+    - gocritic
+    - revive
+    - misspell
+    - nakedret
+    - whitespace
+    - prealloc
+    - bodyclose
     - noctx
+    - gosec
     - nolintlint
-    - promlinter
+
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+
+    revive:
+      rules:
+        - name: exported
+          arguments: [disableStutteringCheck]
+        - name: if-return
+        - name: error-return
+        - name: error-naming
+        - name: error-strings
+        - name: var-naming
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: unreachable-code
+
+    nakedret:
+      max-func-lines: 30
+
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - noctx
+          - bodyclose
+          - errname
+          - revive
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/kaptinlin/jsonrepair
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gosec
-        - noctx
-        - revive

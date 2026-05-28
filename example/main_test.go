@@ -7,9 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kaptinlin/jsonrepair"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kaptinlin/jsonrepair"
 )
 
 var errWriteFailed = errors.New("write failed")

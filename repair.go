@@ -124,7 +124,7 @@ func parseWhitespace(text *[]rune, i *int, output *strings.Builder, skipNewline 
 
 	for *i < len(*text) && (isW((*text)[*i]) || isSpecialWhitespace((*text)[*i])) {
 		if isSpecialWhitespace((*text)[*i]) {
-			output.WriteRune(' ') // repair special whitespace
+			output.WriteByte(' ') // repair special whitespace
 		} else {
 			output.WriteRune((*text)[*i])
 		}
@@ -700,11 +700,10 @@ func invalidUnicodeSequenceError(text []rune, start, hexCount int, quoteIncomple
 	}
 
 	chars := string(text[start : start+end])
-	escapedChars := strings.ReplaceAll(chars, "\\", "\\\\")
 	if quoteIncomplete && hexCount < 4 && end == 2+hexCount {
-		return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character \"%s\"\"", escapedChars), start)
+		return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character %q\"", chars), start)
 	}
-	return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character \"%s\"", escapedChars), start)
+	return newInvalidUnicodeError(fmt.Sprintf("invalid unicode character %q", chars), start)
 }
 
 // parseConcatenatedString parses concatenated strings (e.g., "hello" + "world").
@@ -916,7 +915,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		output.WriteByte('"')
 		for _, char := range symbol {
 			if isSingleQuoteLike(char) || isDoubleQuoteLike(char) {
-				output.WriteRune('"')
+				output.WriteByte('"')
 			} else {
 				output.WriteRune(char)
 			}

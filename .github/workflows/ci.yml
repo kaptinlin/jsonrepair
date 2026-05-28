@@ -5,11 +5,23 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GOTOOLCHAIN: local
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -27,15 +39,16 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Run unit tests
+      - name: Run tests
         run: task test
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GOGC: "50"
+      GOMEMLIMIT: 4GiB
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -53,25 +66,23 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Check module graph is tidy
+        run: task tidy-lint
 
       - name: Read golangci-lint version
-        id: golangci-version
-        run: echo "version=$(cat .golangci.version 2>/dev/null || echo '2.12.2')" >> $GITHUB_OUTPUT
+        id: golangci
+        run: echo "version=v$(cat .golangci.version)" >> "$GITHUB_OUTPUT"
 
-      - name: Run linter via Makefile
-        run: task lint
-
-      - name: Check go mod tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum || (echo "go.mod or go.sum is not tidy" && exit 1)
-
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ steps.golangci.outputs.version }}
+          args: --timeout=30m --concurrency=1 --path-prefix=.
 
   security:
     name: Security
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v6

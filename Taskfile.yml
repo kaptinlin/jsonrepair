@@ -45,12 +45,43 @@ tasks:
       - go mod download
       - go mod tidy
 
-
   deps:update:
-    desc: Update all dependencies
+    desc: Update dependencies for the root module and any nested modules
     cmds:
-      - echo "Updating dependencies..."
-      - go get -u ./... && go mod tidy
+      - |
+        set -e
+        echo "Updating dependencies..."
+        MODULES=". $(find . -mindepth 2 -name go.mod \
+          -not -path '*/vendor/*' -not -path '*/.*' \
+          -exec dirname {} \; | sort)"
+        for dir in $MODULES; do
+          echo "==> $dir"
+          (
+            cd "$dir"
+            replaced=$(awk '
+              /^replace[[:space:]]+[^(]/ { print $2 }
+              /^replace[[:space:]]*\(/ { f=1; next }
+              f && /^\)/ { f=0; next }
+              f && /=>/ { print $1 }
+            ' go.mod)
+            deps=$(awk '
+              /^require[[:space:]]+[^(]/ { print $2 }
+              /^require[[:space:]]*\(/ { f=1; next }
+              f && /^\)/ { f=0; next }
+              f && !/\/\/ indirect/ && NF >= 2 { print $1 }
+            ' go.mod | while read -r dep; do
+              echo "$replaced" | grep -qxF "$dep" || echo "$dep"
+            done | tr '\n' ' ')
+            if [ -n "$deps" ]; then
+              go get -u $deps
+            fi
+            go mod tidy
+          )
+        done
+        if [ -f go.work ]; then
+          echo "==> go work sync"
+          go work sync
+        fi
 
   test:
     desc: Run all tests with race detection
@@ -84,7 +115,7 @@ tasks:
     cmds:
       - '{{.GOLANGCI_LINT_BINARY}} version'
       - echo "Running golangci-lint..."
-      - '{{.GOLANGCI_LINT_BINARY}} run --timeout=10m --path-prefix .'
+      - '{{.GOLANGCI_LINT_BINARY}} run --timeout=30m --concurrency=1 --path-prefix=.'
 
   tidy-lint:
     desc: Check if go.mod and go.sum are tidy
@@ -105,9 +136,11 @@ tasks:
 
   fmt:
     desc: Format Go code
+    deps:
+      - install-golangci-lint
     cmds:
       - echo "Formatting Go code..."
-      - go fmt ./...
+      - '{{.GOLANGCI_LINT_BINARY}} fmt ./...'
 
   vet:
     desc: Run go vet
@@ -124,4 +157,4 @@ tasks:
       - task: lint
       - task: test
       - task: vuln
-      - echo "All verification steps completed successfully ✅"
+      - echo "All verification steps completed successfully"
