@@ -25,13 +25,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        # Do NOT initialize submodules
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
-          cache-dependency-path: go.sum
 
       - name: Install Task
         uses: go-task/setup-task@v2
@@ -52,13 +52,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        # Do NOT initialize submodules
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
-          cache-dependency-path: go.sum
 
       - name: Install Task
         uses: go-task/setup-task@v2
@@ -92,7 +92,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-          cache-dependency-path: go.sum
 
       - name: Run govulncheck
         run: |
