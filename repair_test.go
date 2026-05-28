@@ -1124,6 +1124,13 @@ func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
 			wantMessage:  `unexpected character "\\"`,
 			wantPosition: 3,
 		},
+		{
+			name:         "concatenated string invalid unicode tail",
+			input:        `"hello" + "\uZ000"`,
+			wantSentinel: ErrUnexpectedCharacter,
+			wantMessage:  `unexpected character "\\"`,
+			wantPosition: 11,
+		},
 	}
 
 	for _, tc := range tests {
