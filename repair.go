@@ -840,12 +840,17 @@ func parseKeywords(text *[]rune, i *int, output *strings.Builder) bool {
 
 // parseKeyword parses a specific keyword from the input text.
 func parseKeyword(text *[]rune, i *int, output *strings.Builder, name, value string) bool {
-	if len(*text)-*i >= len(name) && string((*text)[*i:*i+len(name)]) == name {
-		output.WriteString(value)
-		*i += len(name)
-		return true
+	end := *i + len(name)
+	if end > len(*text) || string((*text)[*i:end]) != name {
+		return false
 	}
-	return false
+	if end < len(*text) && !isDelimiter((*text)[end]) && !isWhitespace((*text)[end]) && !isSpecialWhitespace((*text)[end]) {
+		return false
+	}
+
+	output.WriteString(value)
+	*i = end
+	return true
 }
 
 // parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.

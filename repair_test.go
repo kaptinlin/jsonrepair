@@ -703,6 +703,18 @@ func TestShouldReplacePythonConstants(t *testing.T) {
 	assertRepair(t, `None`, `null`)
 }
 
+// TestShouldNotParseKeywordPrefixesAsLiterals tests keyword-like symbols remain strings.
+func TestShouldNotParseKeywordPrefixesAsLiterals(t *testing.T) {
+	t.Parallel()
+
+	assertRepair(t, `trueValue`, `"trueValue"`)
+	assertRepair(t, `falsehood`, `"falsehood"`)
+	assertRepair(t, `nullValue`, `"nullValue"`)
+	assertRepair(t, `NoneType`, `"NoneType"`)
+	assertRepair(t, `{value: TrueValue}`, `{"value": "TrueValue"}`)
+	assertRepair(t, `[nullValue,falsehood]`, `["nullValue","falsehood"]`)
+}
+
 // TestShouldTurnUnknownSymbolsIntoString tests turning unknown symbols into a string in JSON strings.
 func TestShouldTurnUnknownSymbolsIntoString(t *testing.T) {
 	t.Parallel()
