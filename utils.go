@@ -198,7 +198,8 @@ func isURLChar(c rune) bool {
 	}
 	return c == '-' || c == '.' || c == '_' || c == '~' || c == ':' || c == '/' ||
 		c == '?' || c == '#' || c == '@' || c == '!' || c == '$' || c == '&' ||
-		c == '\'' || c == '(' || c == ')' || c == '*' || c == '+' || c == ';' || c == '='
+		c == '\'' || c == '(' || c == ')' || c == '*' || c == '+' || c == ';' ||
+		c == '=' || c == '%'
 }
 
 // Pre-compiled regular expressions for improved performance.

@@ -853,6 +853,16 @@ func parseKeyword(text *[]rune, i *int, output *strings.Builder, name, value str
 	return true
 }
 
+func hasURLPrefix(text []rune, start int) bool {
+	for _, prefix := range []string{"https://", "http://", "ftp://"} {
+		end := start + len(prefix)
+		if end <= len(text) && strings.EqualFold(string(text[start:end]), prefix) {
+			return true
+		}
+	}
+	return false
+}
+
 // parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.
 func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool) bool {
 	start := *i
@@ -868,7 +878,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		}
 
 		j := *i
-		for j < len(*text) && isWhitespace((*text)[j]) {
+		for j < len(*text) && (isWhitespace((*text)[j]) || isSpecialWhitespace((*text)[j])) {
 			j++
 		}
 
@@ -887,9 +897,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	}
 
 	// Check if this starts with a URL pattern (only when not parsing a key)
-	isURL := !isKey && ((start+8 <= len(*text) && string((*text)[start:start+8]) == "https://") ||
-		(start+7 <= len(*text) && string((*text)[start:start+7]) == "http://") ||
-		(start+6 <= len(*text) && string((*text)[start:start+6]) == "ftp://"))
+	isURL := !isKey && hasURLPrefix(*text, start)
 
 	if isURL {
 		for *i < len(*text) && isURLChar((*text)[*i]) {
@@ -935,6 +943,15 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	return true
 }
 
+func isRegexFlag(char rune) bool {
+	switch char {
+	case 'd', 'g', 'i', 'm', 's', 'u', 'v', 'y':
+		return true
+	default:
+		return false
+	}
+}
+
 // parseRegex parses a regex literal like /pattern/flags and wraps it in quotes.
 func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 	if *i >= len(*text) || (*text)[*i] != codeSlash {
@@ -943,12 +960,28 @@ func parseRegex(text *[]rune, i *int, output *strings.Builder) bool {
 
 	start := *i
 	*i++
+	inCharClass := false
+	escaped := false
+	closed := false
 
-	for *i < len(*text) && ((*text)[*i] != codeSlash || (*text)[*i-1] == codeBackslash) {
+	for *i < len(*text) && !closed {
+		char := (*text)[*i]
+		switch {
+		case escaped:
+			escaped = false
+		case char == codeBackslash:
+			escaped = true
+		case char == codeOpeningBracket:
+			inCharClass = true
+		case char == codeClosingBracket:
+			inCharClass = false
+		case char == codeSlash && !inCharClass:
+			closed = true
+		}
 		*i++
 	}
 
-	if *i < len(*text) && (*text)[*i] == codeSlash {
+	for *i < len(*text) && isRegexFlag((*text)[*i]) {
 		*i++
 	}
 

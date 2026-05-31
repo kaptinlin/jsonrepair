@@ -142,6 +142,8 @@ func TestShouldRepairUnquotedUrl(t *testing.T) {
 	assertRepair(t, `{url:https://www.example.com/,"id":2}`, `{"url":"https://www.example.com/","id":2}`)
 	assertRepair(t, `[https://www.example.com/]`, `["https://www.example.com/"]`)
 	assertRepair(t, `[https://www.example.com/,2]`, `["https://www.example.com/",2]`)
+	assertRepair(t, `HTTPS://www.example.com/a%20b?q=1`, `"HTTPS://www.example.com/a%20b?q=1"`)
+	assertRepair(t, `{url:HTTPS://www.example.com/a%20b}`, `{"url":"HTTPS://www.example.com/a%20b"}`)
 }
 
 // TestShouldRepairUrlWithMissingEndQuote tests repairing URLs with missing end quotes.
@@ -512,6 +514,7 @@ func TestShouldStripJSONPNotation(t *testing.T) {
 
 	// matching
 	assertRepair(t, "callback_123({});", "{}")
+	assertRepair(t, "callback_123\u00a0({});", "{}")
 	assertRepair(t, "callback_123([]);", "[]")
 	assertRepair(t, "callback_123(2);", "2")
 	assertRepair(t, `callback_123("foo");`, `"foo"`)
@@ -748,6 +751,8 @@ func TestShouldRepairRegularExpressions(t *testing.T) {
 	t.Parallel()
 
 	assertRepair(t, `{regex: /standalone-styles.css/}`, `{"regex": "/standalone-styles.css/"}`)
+	assertRepair(t, `{regex: /standalone-styles.css/gi}`, `{"regex": "/standalone-styles.css/gi"}`)
+	assertRepair(t, `{regex: /[/]/g}`, `{"regex": "/[/]/g"}`)
 	assertRepair(t, `{regex: /with escape char \/ [a-z]_/}`, `{"regex": "/with escape char \\/ [a-z]_/"}`)
 	assertRepair(t, `/[a-z]_/`, `"/[a-z]_/"`)
 	// with escape char
