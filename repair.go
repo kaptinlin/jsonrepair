@@ -96,9 +96,16 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 	}
 	processed = stringProcessed ||
 		parseNumber(text, i, output) ||
-		parseKeywords(text, i, output) ||
-		parseUnquotedStringWithMode(text, i, output, false) ||
-		parseRegex(text, i, output)
+		parseKeywords(text, i, output)
+	if !processed {
+		processed, err = parseUnquotedStringWithMode(text, i, output, false)
+		if err != nil {
+			return false, err
+		}
+	}
+	if !processed {
+		processed = parseRegex(text, i, output)
+	}
 
 	parseWhitespaceAndSkipComments(text, i, output, true)
 	return processed, nil
@@ -266,7 +273,13 @@ func parseObject(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 			if err != nil {
 				return false, err
 			}
-			processedKey := stringProcessed || parseUnquotedStringWithMode(text, i, output, true)
+			processedKey := stringProcessed
+			if !processedKey {
+				processedKey, err = parseUnquotedStringWithMode(text, i, output, true)
+				if err != nil {
+					return false, err
+				}
+			}
 			if !processedKey {
 				if *i >= len(*text) ||
 					(*text)[*i] == codeClosingBrace ||
@@ -864,11 +877,11 @@ func hasURLPrefix(text []rune, start int) bool {
 }
 
 // parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.
-func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool) bool {
+func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool) (bool, error) {
 	start := *i
 
 	if *i >= len(*text) {
-		return false
+		return false, nil
 	}
 
 	// Check for function name start (MongoDB/JSONP function calls)
@@ -884,7 +897,9 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 
 		if j < len(*text) && (*text)[j] == codeOpenParenthesis {
 			*i = j + 1
-			_, _ = parseValue(text, i, output)
+			if _, err := parseValue(text, i, output); err != nil {
+				return false, err
+			}
 
 			if *i < len(*text) && (*text)[*i] == codeCloseParenthesis {
 				*i++
@@ -892,7 +907,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 					*i++
 				}
 			}
-			return true
+			return true, nil
 		}
 	}
 
@@ -913,7 +928,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 	}
 
 	if *i <= start {
-		return false
+		return false, nil
 	}
 
 	for *i > start && isWhitespace((*text)[*i-1]) {
@@ -940,7 +955,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		*i++
 	}
 
-	return true
+	return true, nil
 }
 
 func isRegexFlag(char rune) bool {

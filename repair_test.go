@@ -223,7 +223,8 @@ func TestParseUnquotedStringWithModeValueParsesURLs(t *testing.T) {
 	var output strings.Builder
 	index := 0
 
-	processed := parseUnquotedStringWithMode(&text, &index, &output, false)
+	processed, err := parseUnquotedStringWithMode(&text, &index, &output, false)
+	require.NoError(t, err)
 
 	require.True(t, processed)
 	assert.Equal(t, len(text), index)
@@ -532,6 +533,12 @@ func TestShouldStripJSONPNotation(t *testing.T) {
 	assertRepair(t, "\n/* foo\nbar */\ncallback_123 ({});\n\n", "\n\n{}\n\n")
 	// non-matching
 	assertRepairFailureExact(t, `callback {}`, `unexpected character "{"`, 9)
+}
+
+func TestShouldPropagateJSONPValueError(t *testing.T) {
+	t.Parallel()
+
+	assertRepairFailureExact(t, `callback({"a":"\uZZZ"});`, `invalid unicode character "\\uZZZ"`, 15)
 }
 
 // TestShouldRepairEscapedStringContents tests repairing escaped string contents in JSON strings.
