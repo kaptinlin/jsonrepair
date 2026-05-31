@@ -398,6 +398,8 @@ func TestShouldAddRemoveEscapeCharacters(t *testing.T) {
 	assertRepair(t, `'foo\'bar'`, `"foo'bar"`)
 	assertRepair(t, `"foo\'bar"`, `"foo'bar"`)
 	assertRepair(t, `"\a"`, `"a"`)
+	assertRepair(t, `\"foo\"`, `"foo"`)
+	assertRepair(t, `\'foo\'`, `"foo"`)
 	assertRepair(t, "\"first\\\nsecond\"", `"first\nsecond"`)
 }
 
@@ -1298,6 +1300,12 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 			desc:     "Backslashes are escaped when not clearly non-path",
 		},
 		{
+			name:     "Relative Unix pattern path",
+			input:    `{"path": "tmp/usr/local/bin\tool"}`,
+			expected: `{"path": "tmp/usr/local/bin\\tool"}`,
+			desc:     "Unix system path segments trigger file path mode in relative paths",
+		},
+		{
 			name:     "Multiple file paths in arrays",
 			input:    `{"files": ["C:\docs\file.txt", "D:\data\report.pdf"]}`,
 			expected: `{"files": ["C:\\docs\\file.txt", "D:\\data\\report.pdf"]}`,
@@ -1312,6 +1320,40 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 			result, err := Repair(tc.input)
 			require.NoError(t, err, "Should not error: %s", tc.desc)
 			assert.Equal(t, tc.expected, result, "Failed: %s", tc.desc)
+		})
+	}
+}
+
+func TestSentenceLikeStringsWithBackslashesStayText(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "multiple spaces",
+			input: `{"msg": "hello  world\new"}`,
+			want:  `{"msg": "hello  world\new"}`,
+		},
+		{
+			name:  "sentence punctuation",
+			input: `{"msg": "See C:\temp. Please retry"}`,
+			want:  `{"msg": "See C:\temp. Please retry"}`,
+		},
+		{
+			name:  "many words",
+			input: `{"msg": "one two three four five six C:\temp"}`,
+			want:  `{"msg": "one two three four five six C:\temp"}`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			assertRepair(t, tc.input, tc.want)
 		})
 	}
 }
