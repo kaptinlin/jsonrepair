@@ -903,6 +903,9 @@ func TestShouldRepairNumberWithLeadingZero(t *testing.T) {
 	assertRepair(t, `002e3`, `"002e3"`)
 	assertRepair(t, `[0789]`, `["0789"]`)
 	assertRepair(t, `{value:0789}`, `{"value":"0789"}`)
+	assertRepair(t, `-0789`, `"-0789"`)
+	assertRepair(t, `[-0789]`, `["-0789"]`)
+	assertRepair(t, `{value:-0789}`, `{"value":"-0789"}`)
 }
 
 // TestShouldStripMarkdownFencedCodeBlocks tests stripping Markdown fenced code blocks.

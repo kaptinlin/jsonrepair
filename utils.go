@@ -205,7 +205,7 @@ func isURLChar(c rune) bool {
 // Pre-compiled regular expressions for improved performance.
 // These are compiled once at package initialization time.
 var (
-	leadingZeroRe            = regexp.MustCompile(`^0\d`)
+	leadingZeroRe            = regexp.MustCompile(`^-?0\d`)
 	endsWithCommaOrNewlineRe = regexp.MustCompile(`"[ \t\r]*[,\n][ \t\r]*$`)
 	driveLetterRe            = regexp.MustCompile(`^[A-Za-z]:\\`)
 	containsDriveRe          = regexp.MustCompile(`[A-Za-z]:\\`)
