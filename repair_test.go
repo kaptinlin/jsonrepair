@@ -1280,6 +1280,18 @@ func TestFilePathSpecificEscaping(t *testing.T) {
 			desc:     "Drive letter patterns trigger file path mode",
 		},
 		{
+			name:     "Single quoted Windows path",
+			input:    `{"path": 'C:\Users\Documents'}`,
+			expected: `{"path": "C:\\Users\\Documents"}`,
+			desc:     "File path mode applies before normalizing single quotes",
+		},
+		{
+			name:     "Smart quoted Windows path",
+			input:    `{"path": “C:\Users\Documents”}`,
+			expected: `{"path": "C:\\Users\\Documents"}`,
+			desc:     "File path mode applies before normalizing smart quotes",
+		},
+		{
 			name:     "Windows path with newline pattern",
 			input:    `{"path": "C:\temp\newfile"}`,
 			expected: `{"path": "C:\\temp\\newfile"}`,

@@ -137,6 +137,19 @@ func isSingleQuote(c rune) bool {
 	return c == codeQuote
 }
 
+func endQuoteMatcher(startQuote rune) func(rune) bool {
+	switch {
+	case isDoubleQuote(startQuote):
+		return isDoubleQuote
+	case isSingleQuote(startQuote):
+		return isSingleQuote
+	case isSingleQuoteLike(startQuote):
+		return isSingleQuoteLike
+	default:
+		return isDoubleQuoteLike
+	}
+}
+
 // endsWithCommaOrNewline checks if the string ends with a comma or newline.
 // Only matches commas outside of quoted strings.
 func endsWithCommaOrNewline(text string) bool {
@@ -577,10 +590,11 @@ func isLikelyFilePath(content string) bool {
 }
 
 func analyzePotentialFilePath(text *[]rune, startPos int) bool {
-	if startPos >= len(*text) || (*text)[startPos] != '"' {
+	if startPos >= len(*text) || !isQuote((*text)[startPos]) {
 		return false
 	}
 
+	isEndQuote := endQuoteMatcher((*text)[startPos])
 	i := startPos + 1
 	var contentBuilder strings.Builder
 	hasPathSeparator := false
@@ -589,7 +603,7 @@ func analyzePotentialFilePath(text *[]rune, startPos int) bool {
 	for i < len(*text) && i < startPos+maxScanLength {
 		char := (*text)[i]
 
-		if char == '"' {
+		if isEndQuote(char) {
 			break
 		}
 

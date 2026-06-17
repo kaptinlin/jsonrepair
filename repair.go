@@ -456,17 +456,7 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 	}
 
 	if *i < len(*text) && isQuote((*text)[*i]) {
-		isEndQuote := func(r rune) bool { return r == (*text)[*i] }
-		switch {
-		case isDoubleQuote((*text)[*i]):
-			isEndQuote = isDoubleQuote
-		case isSingleQuote((*text)[*i]):
-			isEndQuote = isSingleQuote
-		case isSingleQuoteLike((*text)[*i]):
-			isEndQuote = isSingleQuoteLike
-		case isDoubleQuoteLike((*text)[*i]):
-			isEndQuote = isDoubleQuoteLike
-		}
+		isEndQuote := endQuoteMatcher((*text)[*i])
 
 		iBefore := *i
 		oBefore := output.Len()
