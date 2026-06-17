@@ -96,6 +96,23 @@ tasks:
           go work sync
         fi
 
+  submodule:update:
+    desc: Update nested reference submodules for this repository
+    cmds:
+      - |
+        set -eu
+        if [ ! -f .gitmodules ] || [ ! -d .references ]; then
+          echo "No reference submodules."
+          exit 0
+        fi
+        git submodule sync --recursive -- .references
+        git submodule update --init --recursive --remote --force -- .references
+
+  deps:submodules:
+    desc: Update nested reference submodules
+    cmds:
+      - task: submodule:update
+
   test:
     desc: Run all tests with race detection
     cmds:

@@ -18,7 +18,7 @@ A Go library that repairs malformed JSON and JSON-adjacent text into valid JSON
 go get github.com/kaptinlin/jsonrepair
 ```
 
-Requires **Go 1.26+**.
+Requires **Go 1.26.4+**.
 
 ## Quick Start
 

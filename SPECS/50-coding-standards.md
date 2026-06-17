@@ -50,7 +50,7 @@ Coverage must continue to emphasize:
 - `github.com/go-json-experiment/json` remains the production dependency for JSON-v2 behavior used in tests until the standard library API is finalized.
 - `github.com/stretchr/testify` remains the default assertion library for tests.
 - Linting must continue to run through `golangci-lint` with the version pinned in `.golangci.version`.
-- Markdown under `SPECS/` must stay within the normal markdownlint coverage for the repository.
+- Markdown under `SPECS/` must stay within the normal documentation review for the repository.
 
 ## Forbidden
 
@@ -63,6 +63,6 @@ Coverage must continue to emphasize:
 
 - [ ] Parser helpers follow the existing state, whitespace, and output-construction patterns.
 - [ ] Tests protect repair behavior rather than documentation layout.
-- [ ] Lint, tests, and markdownlint continue to cover the spec tree.
+- [ ] Lint, tests, and documentation review continue to cover the spec tree.
 
 **Origin:** Migrated from `CLAUDE.md` (Coding Rules, Testing, Dependencies, and golangci-lint Configuration).
