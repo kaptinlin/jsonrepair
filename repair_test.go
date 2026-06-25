@@ -864,6 +864,14 @@ func TestShouldRepairCombinationOfMissingChars(t *testing.T) {
 	assertRepair(t, "[a,b\nc]", "[\"a\",\"b\",\n\"c\"]")
 }
 
+func TestShouldRepairMixedParserModes(t *testing.T) {
+	t.Parallel()
+
+	input := "```json\n{items: [1 2], text: 'hello' + \" world\", regex: /foo/i}\n```"
+	expected := "\n{\"items\": [1, 2], \"text\": \"hello world\", \"regex\": \"/foo/i\"}\n"
+	assertRepair(t, input, expected)
+}
+
 // TestShouldRepairNewlineSeparatedJSON tests repairing newline separated JSON.
 func TestShouldRepairNewlineSeparatedJSON(t *testing.T) {
 	t.Parallel()
