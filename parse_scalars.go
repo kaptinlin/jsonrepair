@@ -121,7 +121,7 @@ func hasURLPrefix(text []rune, start int) bool {
 }
 
 // parseUnquotedStringWithMode parses unquoted strings with a mode parameter to control URL parsing.
-func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool) (bool, error) {
+func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, isKey bool, depth int) (bool, error) {
 	start := *i
 
 	if *i >= len(*text) {
@@ -141,7 +141,7 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 
 		if j < len(*text) && (*text)[j] == codeOpenParenthesis {
 			*i = j + 1
-			if _, err := parseValue(text, i, output); err != nil {
+			if _, err := parseValue(text, i, output, depth+1); err != nil {
 				return false, err
 			}
 

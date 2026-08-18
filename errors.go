@@ -18,6 +18,8 @@ var (
 	ErrUnexpectedCharacter = errors.New("unexpected character")
 	// ErrInvalidUnicode reports an invalid Unicode escape sequence.
 	ErrInvalidUnicode = errors.New("invalid unicode character")
+	// ErrMaxDepthExceeded reports that the input nests values more deeply than the parser allows.
+	ErrMaxDepthExceeded = errors.New("maximum nesting depth exceeded")
 )
 
 // Error reports a non-repairable parse error and its position.
@@ -69,4 +71,8 @@ func newInvalidUnicodeError(message string, position int) *Error {
 
 func newInvalidCharacterError(message string, position int) *Error {
 	return newError(message, position, ErrInvalidCharacter)
+}
+
+func newMaxDepthExceededError(position int) *Error {
+	return newError(ErrMaxDepthExceeded.Error(), position, ErrMaxDepthExceeded)
 }
