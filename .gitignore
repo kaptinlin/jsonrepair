@@ -61,6 +61,7 @@ reports/
 PLAN*.md
 IMPROVE.md
 IMPROVE*.md
+!/improve.md
 REFACTOR.md
 REFACTOR*.md
 ANALYSIS.md

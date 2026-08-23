@@ -36,6 +36,7 @@ The error surface must continue to support `errors.Is` through sentinel errors f
 - `ErrInvalidCharacter`
 - `ErrUnexpectedCharacter`
 - `ErrInvalidUnicode`
+- `ErrMaxDepthExceeded`
 
 > **Why**: Callers need both a human-readable message and a machine-checkable category when repair cannot proceed.
 >
@@ -57,6 +58,7 @@ The error surface must continue to support `errors.Is` through sentinel errors f
 
 - [ ] The package exposes a single primary repair function.
 - [ ] Non-repairable failures can be inspected with `errors.As` and `errors.Is`.
+- [ ] Excessive nesting returns a position-aware `ErrMaxDepthExceeded` error.
 - [ ] Public compatibility is defined in terms of behavior, not internal helper structure.
 
 **Origin:** Migrated from `CLAUDE.md` (Key Types and Interfaces).

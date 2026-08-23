@@ -29,8 +29,15 @@ Parser state must operate on `[]rune` input so Unicode handling remains correct.
 
 - `i` for the current input position.
 - `output` as a `strings.Builder` holding the repaired JSON.
+- `depth` as the number of currently open objects, arrays, and function-call wrappers.
 
 Position tracking is part of the architecture, not an optional debugging aid.
+
+## Bounded Recursion
+
+Top-level values start at depth zero. Entering an object, array, or function-call wrapper increments the depth, and the parser must reject the opener before it would exceed the internal limit. Scalars do not add a level.
+
+Each newline-delimited JSON entry starts at depth zero. Errors from any entry must propagate to `Repair` rather than being treated as the end of the sequence.
 
 ## Repair Strategy
 
@@ -59,6 +66,7 @@ The architecture must preserve the targeted recovery modes that distinguish this
 
 - [ ] Repair decisions happen inside the parser flow.
 - [ ] Unicode-safe position tracking remains part of the core state model.
+- [ ] Recursive structures have a deterministic, position-aware nesting limit.
 - [ ] Specialized modes remain explicit architectural features rather than incidental patches.
 
 **Origin:** Migrated from `CLAUDE.md` (Architecture).

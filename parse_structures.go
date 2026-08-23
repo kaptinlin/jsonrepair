@@ -6,6 +6,11 @@ import "strings"
 // Returns (success, error) where error is non-nil for non-repairable issues.
 func parseObject(text *[]rune, i *int, output *strings.Builder, depth int) (bool, error) {
 	if *i < len(*text) && (*text)[*i] == codeOpeningBrace {
+		childDepth, err := nextNestingDepth(depth, *i)
+		if err != nil {
+			return false, err
+		}
+
 		output.WriteRune((*text)[*i])
 		*i++
 		parseWhitespaceAndSkipComments(text, i, output, true)
@@ -72,7 +77,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder, depth int) (bool
 			}
 			processedKey := stringProcessed
 			if !processedKey {
-				processedKey, err = parseUnquotedStringWithMode(text, i, output, true, depth)
+				processedKey, err = parseUnquotedStringWithMode(text, i, output, true, childDepth)
 				if err != nil {
 					return false, err
 				}
@@ -103,7 +108,7 @@ func parseObject(text *[]rune, i *int, output *strings.Builder, depth int) (bool
 					return false, newColonExpectedError(*i)
 				}
 			}
-			processedValue, err := parseValue(text, i, output, depth+1)
+			processedValue, err := parseValue(text, i, output, childDepth)
 			if err != nil {
 				return false, err
 			}
@@ -137,6 +142,11 @@ func parseArray(text *[]rune, i *int, output *strings.Builder, depth int) (bool,
 	}
 
 	if (*text)[*i] == codeOpeningBracket {
+		childDepth, err := nextNestingDepth(depth, *i)
+		if err != nil {
+			return false, err
+		}
+
 		output.WriteRune((*text)[*i])
 		*i++
 		parseWhitespaceAndSkipComments(text, i, output, true)
@@ -164,7 +174,7 @@ func parseArray(text *[]rune, i *int, output *strings.Builder, depth int) (bool,
 
 			skipEllipsis(text, i, output)
 
-			processedValue, err := parseValue(text, i, output, depth+1)
+			processedValue, err := parseValue(text, i, output, childDepth)
 			if err != nil {
 				return false, err
 			}
@@ -223,12 +233,13 @@ func parseArray(text *[]rune, i *int, output *strings.Builder, depth int) (bool,
 }
 
 // parseNewlineDelimitedJSON parses Newline Delimited JSON (NDJSON) from the input text.
-func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
+func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) error {
 	for {
-		// Each newline-delimited entry is an independent top-level value, so
-		// recursion depth restarts at zero for every item.
 		processedValue, err := parseValue(text, i, output, 0)
-		if err != nil || !processedValue {
+		if err != nil {
+			return err
+		}
+		if !processedValue {
 			resetOutput(output, stripLastOccurrence(output.String(), ",", false))
 			break
 		}
@@ -239,4 +250,5 @@ func parseNewlineDelimitedJSON(text *[]rune, i *int, output *strings.Builder) {
 	}
 
 	resetOutput(output, "[\n"+output.String()+"\n]")
+	return nil
 }

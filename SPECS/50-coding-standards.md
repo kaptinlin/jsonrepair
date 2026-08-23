@@ -21,13 +21,14 @@ Output construction must use `strings.Builder` and helper functions that modify 
 - Return structured `*Error` values with position information for non-repairable failures.
 - Keep sentinel errors for common failure classes.
 - Internal parse helpers should continue to use `(bool, error)` to distinguish repaired success from terminal failure.
+- Propagate parse errors through specialized modes such as newline-delimited JSON.
 
 ## Performance Rules
 
 - Preserve single-pass processing with minimal backtracking.
 - Keep rune-based parsing for full Unicode support.
 - Prefer precompiled regex patterns where regex-based checks are needed.
-- Avoid recursion patterns that can grow into stack-overflow risks.
+- Bound recursive parsing before entering an object, array, or function-call wrapper.
 
 ## Testing Rules
 

@@ -1,7 +1,6 @@
 package jsonrepair
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -9,41 +8,113 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRepairDeeplyNestedDoesNotOverflow ensures that pathologically deep input
-// is rejected with an error instead of exhausting the goroutine stack and
-// crashing the program. Objects, arrays and function-call values are parsed
-// recursively, so an unbounded nesting depth is a denial-of-service vector.
-func TestRepairDeeplyNestedDoesNotOverflow(t *testing.T) {
+type nestingCase struct {
+	name         string
+	open         string
+	close        string
+	empty        string
+	openerOffset int
+	unwrap       bool
+}
+
+var nestingCases = []*nestingCase{
+	{name: "arrays", open: "[", close: "]", empty: "[]"},
+	{name: "objects", open: `{"a":`, close: "}", empty: "{}"},
+	{name: "function calls", open: "f(", close: ")", openerOffset: 1, unwrap: true},
+}
+
+func (tc *nestingCase) build(depth int, closed bool) (input, want string) {
+	prefix := strings.Repeat(tc.open, depth)
+	suffix := strings.Repeat(tc.close, depth)
+	input = prefix + "0"
+	if closed {
+		input += suffix
+	}
+	want = prefix + "0" + suffix
+	if tc.unwrap {
+		want = "0"
+	}
+	return input, want
+}
+
+func (tc *nestingCase) buildEmpty(depth int) string {
+	return strings.Repeat(tc.open, depth-1) + tc.empty + strings.Repeat(tc.close, depth-1)
+}
+
+func (tc *nestingCase) exceededPosition(depth int) int {
+	return len([]rune(tc.open))*depth + tc.openerOffset
+}
+
+func TestRepairNestingDepthBoundary(t *testing.T) {
 	t.Parallel()
 
-	cases := map[string]string{
-		"arrays":         strings.Repeat("[", maxRecursionDepth+100),
-		"objects":        strings.Repeat(`{"a":`, maxRecursionDepth+100),
-		"function calls": strings.Repeat("f(", maxRecursionDepth+100),
-		// A very large input that, without the depth limit, overflows the stack.
-		"huge arrays": strings.Repeat("[", 2_000_000) + strings.Repeat("]", 2_000_000),
-	}
+	for _, tc := range nestingCases {
+		t.Run(tc.name, func(t *testing.T) {
+			input, want := tc.build(maxNestingDepth, true)
+			got, err := Repair(input)
+			require.NoError(t, err)
+			assert.Equal(t, want, got)
 
-	for name, input := range cases {
-		input := input
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			_, err := Repair(input)
-			require.Error(t, err)
-			assert.True(t, errors.Is(err, ErrMaxDepthExceeded),
-				"expected ErrMaxDepthExceeded, got %v", err)
+			for _, closed := range []bool{true, false} {
+				input, _ = tc.build(maxNestingDepth+1, closed)
+				requireMaxDepthError(t, input, tc.exceededPosition(maxNestingDepth))
+			}
 		})
 	}
 }
 
-// TestRepairDeepButValidNestingSucceeds ensures the depth limit is generous
-// enough that realistic deep documents still parse.
-func TestRepairDeepButValidNestingSucceeds(t *testing.T) {
+func TestRepairEmptyNestingDepthBoundary(t *testing.T) {
 	t.Parallel()
 
-	const depth = 1000
-	input := strings.Repeat("[", depth) + strings.Repeat("]", depth)
-	out, err := Repair(input)
-	require.NoError(t, err)
-	assert.Equal(t, input, out)
+	for _, tc := range nestingCases {
+		if tc.empty == "" {
+			continue
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			input := tc.buildEmpty(maxNestingDepth)
+			got, err := Repair(input)
+			require.NoError(t, err)
+			assert.Equal(t, input, got)
+
+			requireMaxDepthError(
+				t,
+				tc.buildEmpty(maxNestingDepth+1),
+				tc.exceededPosition(maxNestingDepth),
+			)
+		})
+	}
+}
+
+func TestRepairNestingDepthInNDJSON(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		prefix string
+	}{
+		{name: "first entry"},
+		{name: "second entry", prefix: "0\n"},
+		{name: "later entry", prefix: "0\n1\n"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			input := tc.prefix + strings.Repeat("[", maxNestingDepth+1)
+			requireMaxDepthError(t, input, len([]rune(tc.prefix))+maxNestingDepth)
+		})
+	}
+}
+
+func requireMaxDepthError(t *testing.T, input string, position int) {
+	t.Helper()
+
+	got, err := Repair(input)
+	require.ErrorIs(t, err, ErrMaxDepthExceeded)
+	assert.Empty(t, got)
+
+	var repairErr *Error
+	require.ErrorAs(t, err, &repairErr)
+	assert.Equal(t, ErrMaxDepthExceeded.Error(), repairErr.Message)
+	assert.Equal(t, position, repairErr.Position)
+	assert.Same(t, ErrMaxDepthExceeded, repairErr.Err)
 }

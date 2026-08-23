@@ -12,13 +12,8 @@ import (
 	"strings"
 )
 
-// maxRecursionDepth bounds how deeply nested a value the parser will descend
-// into. Object, array, and function-call values are parsed recursively, so
-// without a limit a deeply nested input (for example many thousands of opening
-// brackets) can exhaust the goroutine stack and crash the program. The limit is
-// far larger than any realistic JSON document; inputs that exceed it return an
-// error instead of aborting the process.
-const maxRecursionDepth = 10000
+// maxNestingDepth bounds recursive structures before they can exhaust the stack.
+const maxNestingDepth = 10000
 
 // Repair repairs malformed JSON-like input into valid JSON.
 //
@@ -53,7 +48,9 @@ func Repair(text string) (string, error) {
 		if !processedComma {
 			resetOutput(&output, insertBeforeLastWhitespace(output.String(), ","))
 		}
-		parseNewlineDelimitedJSON(&runes, &i, &output)
+		if err := parseNewlineDelimitedJSON(&runes, &i, &output); err != nil {
+			return "", err
+		}
 	} else if processedComma {
 		resetOutput(&output, stripLastOccurrence(output.String(), ",", false))
 	}
@@ -75,13 +72,8 @@ func Repair(text string) (string, error) {
 
 // parseValue determines the type of the next value and parses it.
 // Returns (success, error) where error is non-nil for non-repairable issues.
-// depth is the current nesting level and is used to bound recursion so that
-// deeply nested input cannot overflow the goroutine stack.
+// depth is the number of currently open recursive structures.
 func parseValue(text *[]rune, i *int, output *strings.Builder, depth int) (bool, error) {
-	if depth > maxRecursionDepth {
-		return false, newMaxDepthExceededError(*i)
-	}
-
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
 	processedObj, err := parseObject(text, i, output, depth)
@@ -121,4 +113,11 @@ func parseValue(text *[]rune, i *int, output *strings.Builder, depth int) (bool,
 
 	parseWhitespaceAndSkipComments(text, i, output, true)
 	return processed, nil
+}
+
+func nextNestingDepth(depth, position int) (int, error) {
+	if depth >= maxNestingDepth {
+		return 0, newMaxDepthExceededError(position)
+	}
+	return depth + 1, nil
 }

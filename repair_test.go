@@ -1052,6 +1052,13 @@ func TestErrorConstructors(t *testing.T) {
 			wantPosition: 6,
 			wantErr:      ErrInvalidCharacter,
 		},
+		{
+			name:         "maximum nesting depth",
+			build:        func() *Error { return newMaxDepthExceededError(7) },
+			wantMessage:  ErrMaxDepthExceeded.Error(),
+			wantPosition: 7,
+			wantErr:      ErrMaxDepthExceeded,
+		},
 	}
 
 	for _, tc := range tests {
@@ -1157,8 +1164,8 @@ func TestRepairReturnsStructuredSentinelErrors(t *testing.T) {
 		{
 			name:         "newline delimited invalid unicode tail",
 			input:        "1\n\"\\uZ000\"",
-			wantSentinel: ErrUnexpectedCharacter,
-			wantMessage:  `unexpected character "\\"`,
+			wantSentinel: ErrInvalidUnicode,
+			wantMessage:  `invalid unicode character "\\uZ000"`,
 			wantPosition: 3,
 		},
 		{

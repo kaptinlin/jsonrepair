@@ -140,8 +140,13 @@ func parseUnquotedStringWithMode(text *[]rune, i *int, output *strings.Builder, 
 		}
 
 		if j < len(*text) && (*text)[j] == codeOpenParenthesis {
+			childDepth, err := nextNestingDepth(depth, j)
+			if err != nil {
+				return false, err
+			}
+
 			*i = j + 1
-			if _, err := parseValue(text, i, output, depth+1); err != nil {
+			if _, err := parseValue(text, i, output, childDepth); err != nil {
 				return false, err
 			}
 
