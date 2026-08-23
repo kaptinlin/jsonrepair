@@ -12,6 +12,14 @@ import (
 	"strings"
 )
 
+// maxRecursionDepth bounds how deeply nested a value the parser will descend
+// into. Object, array, and function-call values are parsed recursively, so
+// without a limit a deeply nested input (for example many thousands of opening
+// brackets) can exhaust the goroutine stack and crash the program. The limit is
+// far larger than any realistic JSON document; inputs that exceed it return an
+// error instead of aborting the process.
+const maxRecursionDepth = 10000
+
 // Repair repairs malformed JSON-like input into valid JSON.
 //
 // It returns a structured [*Error] when the input is empty or cannot be repaired.
@@ -26,7 +34,7 @@ func Repair(text string) (string, error) {
 
 	parseMarkdownCodeBlock(&runes, &i, []string{"```", "[```", "{```"}, &output)
 
-	success, err := parseValue(&runes, &i, &output)
+	success, err := parseValue(&runes, &i, &output, 0)
 	if err != nil {
 		return "", err
 	}
@@ -67,10 +75,16 @@ func Repair(text string) (string, error) {
 
 // parseValue determines the type of the next value and parses it.
 // Returns (success, error) where error is non-nil for non-repairable issues.
-func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
+// depth is the current nesting level and is used to bound recursion so that
+// deeply nested input cannot overflow the goroutine stack.
+func parseValue(text *[]rune, i *int, output *strings.Builder, depth int) (bool, error) {
+	if depth > maxRecursionDepth {
+		return false, newMaxDepthExceededError(*i)
+	}
+
 	parseWhitespaceAndSkipComments(text, i, output, true)
 
-	processedObj, err := parseObject(text, i, output)
+	processedObj, err := parseObject(text, i, output, depth)
 	if err != nil {
 		return false, err
 	}
@@ -79,7 +93,7 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 		return true, nil
 	}
 
-	processed, err := parseArray(text, i, output)
+	processed, err := parseArray(text, i, output, depth)
 	if err != nil {
 		return false, err
 	}
@@ -96,7 +110,7 @@ func parseValue(text *[]rune, i *int, output *strings.Builder) (bool, error) {
 		parseNumber(text, i, output) ||
 		parseKeywords(text, i, output)
 	if !processed {
-		processed, err = parseUnquotedStringWithMode(text, i, output, false)
+		processed, err = parseUnquotedStringWithMode(text, i, output, false, depth)
 		if err != nil {
 			return false, err
 		}

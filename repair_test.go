@@ -223,7 +223,7 @@ func TestParseUnquotedStringWithModeValueParsesURLs(t *testing.T) {
 	var output strings.Builder
 	index := 0
 
-	processed, err := parseUnquotedStringWithMode(&text, &index, &output, false)
+	processed, err := parseUnquotedStringWithMode(&text, &index, &output, false, 0)
 	require.NoError(t, err)
 
 	require.True(t, processed)
