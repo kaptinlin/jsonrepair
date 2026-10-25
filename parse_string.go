@@ -134,7 +134,8 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 
 				char := (*text)[*i+1]
 				if _, ok := escapeCharacters[char]; ok {
-					if mightContainFilePaths {
+					// Escaped double quotes remain string content, including in paths.
+					if mightContainFilePaths && char != '"' {
 						// In file path context, escape the backslash as literal
 						str.WriteString("\\\\")
 						*i++
@@ -207,7 +208,8 @@ func parseString(text *[]rune, i *int, output *strings.Builder, stopAtDelimiter 
 						return true, nil
 					}
 
-					if mightContainFilePaths {
+					// An escaped end quote is content, even when the string looks like a path.
+					if mightContainFilePaths && !isEndQuote(char) {
 						// In file path context, escape the backslash as literal
 						str.WriteString("\\\\")
 						*i++

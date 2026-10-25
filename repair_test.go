@@ -206,6 +206,64 @@ func TestShouldRepairEscapedCommaBeforeDelimiter(t *testing.T) {
 	assertRepair(t, "\"foo\\,\"x", "[\n\"foo\",\"x\"\n]")
 }
 
+func TestShouldPreserveEscapedQuotesInPathLikeStrings(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "apostrophe before brackets and commas",
+			input: `{'a':['/it\'s [1,2,]']}`,
+			want:  `{"a":["/it's [1,2,]"]}`,
+		},
+		{
+			name:  "apostrophe without delimiters",
+			input: `{'a':'/it\'s'}`,
+			want:  `{"a":"/it's"}`,
+		},
+		{
+			name:  "apostrophe without path prefix",
+			input: `{'a':'it\'s'}`,
+			want:  `{"a":"it's"}`,
+		},
+		{
+			name:  "double quotes before comma and braces",
+			input: `{"a":["/say \"hi\", {x}",],}`,
+			want:  `{"a":["/say \"hi\", {x}"]}`,
+		},
+		{
+			name:  "double quotes without delimiters",
+			input: `{"a":["/say \"hi\""],}`,
+			want:  `{"a":["/say \"hi\""]}`,
+		},
+		{
+			name:  "double quote without path prefix",
+			input: `{"a":["x \", y"],}`,
+			want:  `{"a":["x \", y"]}`,
+		},
+		{
+			name:  "escaped double quotes in single quoted string",
+			input: `{'a':'/say \"hi\", {x}'}`,
+			want:  `{"a":"/say \"hi\", {x}"}`,
+		},
+		{
+			name:  "unicode before escaped quotes",
+			input: `{"a":["/说 \"你好\", {x}",],}`,
+			want:  `{"a":["/说 \"你好\", {x}"]}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assertRepair(t, tt.input, tt.want)
+		})
+	}
+}
+
 // TestShouldParseUnquotedString tests parsing unquoted strings.
 func TestShouldParseUnquotedString(t *testing.T) {
 	t.Parallel()
@@ -1449,9 +1507,9 @@ func TestJSONEscapeSequencesInContext(t *testing.T) {
 func TestJSONEscapeSequencesEdgeCases(t *testing.T) {
 	t.Parallel()
 
-	// Already properly escaped sequences - note: current implementation may add extra escaping
+	// Already properly escaped sequences remain unchanged.
 	assertRepairEqual(t, `"Double\\backslash"`)
-	assertRepair(t, `"Quote\"and\"quote"`, `"Quote\\\"and\\\"quote"`) // quotes get extra escaping
+	assertRepairEqual(t, `"Quote\"and\"quote"`)
 
 	// Unicode escape sequences
 	assertRepairEqual(t, `"\u0048\u0065\u006c\u006c\u006f"`) // "Hello" in Unicode
